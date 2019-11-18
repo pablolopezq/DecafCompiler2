@@ -1,0 +1,288 @@
+%option lang = "C++"
+%option reentrant
+
+%decls %{
+    #include <string>
+    #include <cstddef> //for size_t
+    #include <cmath>
+    #include <unordered_map>
+    using string_t = std::string;
+    using map_t = std::unordered_map<std::string, int>;
+    
+
+%}
+
+%{
+    #include "ast.h"
+    #include <iostream>
+    #include <stdio.h>
+    void yyerror(const char *msg);
+    
+%}
+
+%enum type_code = 
+{
+    int_type,
+    string_type
+}
+
+%node ASTNode %abstract %typedef = 
+{
+    %nocreate int value = { 0 };
+    %nocreate string_t str_val = { "" };
+    %nocreate type_code type = {int_type};  
+
+}
+
+%node expression ASTNode %abstract =
+{
+}
+
+%node binary expression %abstract = 
+{
+    ASTNode *expr1;
+    ASTNode *expr2;
+}
+
+%node intnum expression = 
+{
+    int num;
+}
+
+%node str expression =
+{
+    string_t val;
+}
+
+%node id expression =
+{
+    string_t id_val;
+}
+
+%node plus binary
+%node minus binary
+%node multiply binary
+%node divide binary
+%node less binary
+%node greater binary
+%node lte binary
+%node gte binary
+%node equal binary
+%node nequal binary
+
+%node statement ASTNode %abstract
+
+%node stmt_block ASTNode = {
+    ASTNode * first;
+    ASTNode * next;
+}
+
+%node ifStmt statement = {
+    ASTNode * condition;
+    ASTNode * then_s;
+    ASTNode * else_s;
+}
+
+%node assign statement = {
+    string_t id;
+    ASTNode * expression;
+}
+
+%node while_stmt statement = {
+    ASTNode * condition;
+    ASTNode * stmt;
+}
+
+%node print statement = {
+    ASTNode * expr;
+}
+
+%node empty_node statement
+
+%operation %virtual void exec(ASTNode *this, map_t & vars)
+%operation %virtual void infer_type(ASTNode * this)
+
+infer_type(str){
+    type = {string_type};
+}
+
+infer_type(intnum){
+    type = {int_type};
+}
+
+infer_type(plus){
+    type = {int_type};
+}
+
+infer_type(minus){
+    type = {int_type};
+}
+
+infer_type(multiply){
+    type = {int_type};
+}
+
+infer_type(divide){
+    type = {int_type};
+}
+
+infer_type(less){
+    type = {int_type};
+}
+
+infer_type(greater){
+    type = {int_type};
+}
+
+infer_type(lte){
+    type = {int_type};
+}
+
+infer_type(gte){
+    type = {int_type};
+}
+
+infer_type(equal){
+    type = {int_type};
+}
+
+infer_type(nequal){
+    type = {int_type};
+}
+
+infer_type(ifStmt){
+}
+
+infer_type(assign){
+}
+
+infer_type(while_stmt){
+}
+
+infer_type(print){
+}
+
+infer_type(empty_node){
+}
+
+infer_type(stmt_block){
+}
+
+infer_type(id){
+}
+
+exec(empty_node){
+
+}
+
+exec(stmt_block){
+    first->exec(vars);
+    next->exec(vars);
+}
+
+exec(print){
+    expr->exec(vars);
+    expr->infer_type();
+    if(expr->type == int_type)
+        std::cout << expr->value << std::endl;
+    else{
+        expr->str_val.erase(0,1);
+        expr->str_val.erase(expr->str_val.size() - 1);
+        std::cout << expr->str_val << std::endl;
+    }
+}
+
+exec(ifStmt){
+    condition->exec(vars);
+    if(condition->value){
+        then_s->exec(vars);
+    }
+    else{
+        else_s->exec(vars);
+    }
+}
+
+exec(while_stmt){
+    condition->exec(vars);
+    while(condition->value){
+        stmt->exec(vars);
+        condition->exec(vars);
+    }
+}
+
+exec(assign){
+    expression->exec(vars);
+    vars[id] = expression->value;
+}
+
+exec(plus){
+    expr1->exec(vars);
+    expr2->exec(vars);
+    value = expr1->value + expr2->value;
+}
+
+exec(minus){
+    expr1->exec(vars);
+    expr2->exec(vars);
+    value = expr1->value - expr2->value;
+}
+
+exec(multiply){
+    expr1->exec(vars);
+    expr2->exec(vars);
+    value = expr1->value * expr2->value;
+}
+
+exec(divide){
+    expr1->exec(vars);
+    expr2->exec(vars);
+    value = expr1->value / expr2->value;
+}
+
+exec(less){
+    expr1->exec(vars);
+    expr2->exec(vars);
+    value = expr1->value < expr2->value;
+}
+
+exec(greater){
+    expr1->exec(vars);
+    expr2->exec(vars);
+    value = expr1->value > expr2->value;
+}
+
+exec(gte){
+    expr1->exec(vars);
+    expr2->exec(vars);
+    value = expr1->value >= expr2->value;
+}
+
+exec(lte){
+    expr1->exec(vars);
+    expr2->exec(vars);
+    value = expr1->value <= expr2->value;
+}
+
+exec(equal){
+    expr1->exec(vars);
+    expr2->exec(vars);
+    value = (expr1->value == expr2->value);
+}
+
+exec(nequal){
+    expr1->exec(vars);
+    expr2->exec(vars);
+    value = (expr1->value != expr2->value);
+}
+
+exec(intnum){
+    value = num;
+}
+
+exec(id){
+    value = vars[id_val];
+}
+
+exec(str){
+    str_val = val;
+}
