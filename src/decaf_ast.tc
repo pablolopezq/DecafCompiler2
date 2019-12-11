@@ -6,42 +6,44 @@
     #include <cstddef> //for size_t
     #include <cmath>
     #include <unordered_map>
-    using string_t = std::string;
-    using map_t = std::unordered_map<std::string, int>;
-    
+    #include <vector>
 
+    class statement;
+
+    using string_t = std::string;
+    using string_v = std::vector<std::string>;
+    using map_t = std::unordered_map<std::string, int>;
+    using paramv_t = std::vector<statement*>;
 %}
 
 %{
-    #include "ast.h"
+    #include "decaf_ast.h"
     #include <iostream>
     #include <stdio.h>
     void yyerror(const char *msg);
-    
 %}
 
 %enum type_code = 
 {
     int_type,
-    string_type
+    string_type,
+    bool_type,
+    void_type
 }
 
 %node ASTNode %abstract %typedef = 
 {
     %nocreate int value = { 0 };
     %nocreate string_t str_val = { "" };
-    %nocreate type_code type = {int_type};  
-
+    %nocreate type_code type = {int_type};
 }
 
-%node expression ASTNode %abstract =
-{
-}
+%node expression ASTNode %abstract = {}
 
 %node binary expression %abstract = 
 {
-    ASTNode *expr1;
-    ASTNode *expr2;
+    expression *expr1;
+    expression *expr2;
 }
 
 %node intnum expression = 
@@ -59,6 +61,11 @@
     string_t id_val;
 }
 
+%node bool_expr expression =
+{
+    bool b_val;
+}
+
 %node plus binary
 %node minus binary
 %node multiply binary
@@ -72,35 +79,173 @@
 
 %node statement ASTNode %abstract
 
-%node stmt_block ASTNode = {
-    ASTNode * first;
-    ASTNode * next;
+%node stmt_block statement = {
+    statement * first;
+    statement * next;
 }
 
 %node ifStmt statement = {
-    ASTNode * condition;
-    ASTNode * then_s;
-    ASTNode * else_s;
+    expression * condition;
+    stmt_block * then_s;
+    stmt_block * else_s;
+}
+
+%node method_declaration statement = {
+    type_code t;
+    string_t name;
+    paramv_t params;
+    statement * block;
+}
+
+%node param_declaration statement = {
+    type_code t;
+    string_t name;
+}
+
+%node field_declaration statement = {
+    type_code t;
+    string_v names;
+}
+
+%node field_assign statement = {
+    type_code t;
+    string_t name;
+    expression * expr;
 }
 
 %node assign statement = {
     string_t id;
-    ASTNode * expression;
+    expression * expr;
 }
 
 %node while_stmt statement = {
-    ASTNode * condition;
-    ASTNode * stmt;
+    expression * condition;
+    stmt_block * stmt;
+}
+
+%node println statement = {
+    expression * expr;
 }
 
 %node print statement = {
-    ASTNode * expr;
+    expression * expr;
 }
 
 %node empty_node statement
 
 %operation %virtual void exec(ASTNode *this, map_t & vars)
-%operation %virtual void infer_type(ASTNode * this)
+%operation %virtual void infer_type(expression * this)
+%operation %virtual string_t toString(ASTNode * this)
+
+toString(intnum){
+    return std::to_string(num);
+}
+
+toString(str){
+    return val;
+}
+
+toString(id){
+    return id_val;
+}
+
+toString(bool_expr){
+    return b_val ? "1" : "0";
+}
+
+toString(plus){
+    return expr1->toString() + "+" + expr2->toString();
+}
+toString(minus){
+    return expr1->toString() + "-" + expr2->toString();
+}
+toString(multiply){
+    return expr1->toString() + "*" + expr2->toString();
+}
+toString(divide){
+    return expr1->toString() + "/" + expr2->toString();
+}
+toString(less){
+    return expr1->toString() + "<" + expr2->toString();
+}
+toString(greater){
+    return expr1->toString() + ">" + expr2->toString();
+}
+toString(lte){
+    return expr1->toString() + "<=" + expr2->toString();
+}
+toString(gte){
+    return expr1->toString() + ">=" + expr2->toString();
+}
+toString(equal){
+    return expr1->toString() + "==" + expr2->toString();
+}
+toString(nequal){
+    return expr1->toString() + "!=" + expr2->toString();
+}
+
+toString(stmt_block){
+    return first->toString() + "\n" +  next->toString();
+}
+toString(ifStmt){
+    return ("if(" + condition->toString() + ")\n" + "{\n" + then_s->toString() + "\n}\n" + "else {\n" + else_s->toString() + "\n}\n" );
+}
+toString(method_declaration){
+    std::string tp;
+    if(t == int_type) { tp = "int"; } else { tp = "bool"; }
+
+    std::string params_s;
+    for(int i = 0; i < params.size(); i++){
+        params_s += params.at(i)->toString();
+    }
+
+    return (tp + " " + name + "(" + params_s + "){\n" + block->toString() + "\n}\n");
+}
+toString(param_declaration){
+    std::string tp;
+    if(t == int_type) { tp = "int"; } else { tp = "bool"; }
+
+    return tp + " " + name;
+}
+
+toString(field_assign){
+    std::string tp;
+    if(t == int_type) { tp = "int"; } else { tp = "bool"; }
+
+    return tp + " " + name + " " + expr->toString();
+}
+
+toString(field_declaration) {
+    std::string tp;
+    if(t == int_type) { tp = "int"; } else { tp = "bool"; }
+
+    std::string decl_s;
+    for(int i = 0; i < names.size(); i++){
+        decl_s += names.at(i);
+        decl_s += " ";
+    }
+
+    return tp + " " + decl_s + ";";
+}
+
+toString(assign){
+    return id + " " + expr->toString();
+}
+
+toString(while_stmt){
+    return ("while(" + condition->toString() + "){\n" + stmt->toString() + "\n}");
+}
+
+toString(println){
+    return ("System.out.println(" + expr->toString() + ")" );
+}
+
+toString(print){
+    return ("System.out.print(" + expr->toString() + ")" );
+}
+toString(empty_node){
+    return "";
+}
 
 infer_type(str){
     type = {string_type};
@@ -150,24 +295,6 @@ infer_type(nequal){
     type = {int_type};
 }
 
-infer_type(ifStmt){
-}
-
-infer_type(assign){
-}
-
-infer_type(while_stmt){
-}
-
-infer_type(print){
-}
-
-infer_type(empty_node){
-}
-
-infer_type(stmt_block){
-}
-
 infer_type(id){
 }
 
@@ -180,219 +307,7 @@ exec(stmt_block){
     next->exec(vars);
 }
 
-exec(print){
-    expr->exec(vars);
-    expr->infer_type();
-    if(expr->type == int_type)
-        std::cout << expr->value << std::endl;
-    else{
-        expr->str_val.erase(0,1);
-        expr->str_val.erase(expr->str_val.size() - 1);
-        std::cout << expr->str_val << std::endl;
-    }
-}
-
-exec(ifStmt){
-    condition->exec(vars);
-    if(condition->value){
-        then_s->exec(vars);
-    }
-    else{
-        else_s->exec(vars);
-    }
-}
-
-exec(while_stmt){
-    condition->exec(vars);
-    while(condition->value){
-        stmt->exec(vars);
-        condition->exec(vars);
-    }
-}
-
-exec(assign){%option lang = "C++"
-%option reentrant
-
-%decls %{
-    #include <string>
-    #include <cstddef> //for size_t
-    #include <cmath>
-    #include <unordered_map>
-    using string_t = std::string;
-    using map_t = std::unordered_map<std::string, int>;
-    
-
-%}
-
-%{
-    #include "ast.h"
-    #include <iostream>
-    #include <stdio.h>
-    void yyerror(const char *msg);
-    
-%}
-
-%enum type_code = 
-{
-    int_type,
-    string_type
-}
-
-%node ASTNode %abstract %typedef = 
-{
-    %nocreate int value = { 0 };
-    %nocreate string_t str_val = { "" };
-    %nocreate type_code type = {int_type};  
-
-}
-
-%node expression ASTNode %abstract =
-{
-}
-
-%node binary expression %abstract = 
-{
-    ASTNode *expr1;
-    ASTNode *expr2;
-}
-
-%node intnum expression = 
-{
-    int num;
-}
-
-%node str expression =
-{
-    string_t val;
-}
-
-%node id expression =
-{
-    string_t id_val;
-}
-
-%node plus binary
-%node minus binary
-%node multiply binary
-%node divide binary
-%node less binary
-%node greater binary
-%node lte binary
-%node gte binary
-%node equal binary
-%node nequal binary
-
-%node statement ASTNode %abstract
-
-%node stmt_block ASTNode = {
-    ASTNode * first;
-    ASTNode * next;
-}
-
-%node ifStmt statement = {
-    ASTNode * condition;
-    ASTNode * then_s;
-    ASTNode * else_s;
-}
-
-%node assign statement = {
-    string_t id;
-    ASTNode * expression;
-}
-
-%node while_stmt statement = {
-    ASTNode * condition;
-    ASTNode * stmt;
-}
-
-%node print statement = {
-    ASTNode * expr;
-}
-
-%node empty_node statement
-
-%operation %virtual void exec(ASTNode *this, map_t & vars)
-%operation %virtual void infer_type(ASTNode * this)
-
-infer_type(str){
-    type = {string_type};
-}
-
-infer_type(intnum){
-    type = {int_type};
-}
-
-infer_type(plus){
-    type = {int_type};
-}
-
-infer_type(minus){
-    type = {int_type};
-}
-
-infer_type(multiply){
-    type = {int_type};
-}
-
-infer_type(divide){
-    type = {int_type};
-}
-
-infer_type(less){
-    type = {int_type};
-}
-
-infer_type(greater){
-    type = {int_type};
-}
-
-infer_type(lte){
-    type = {int_type};
-}
-
-infer_type(gte){
-    type = {int_type};
-}
-
-infer_type(equal){
-    type = {int_type};
-}
-
-infer_type(nequal){
-    type = {int_type};
-}
-
-infer_type(ifStmt){
-}
-
-infer_type(assign){
-}
-
-infer_type(while_stmt){
-}
-
-infer_type(print){
-}
-
-infer_type(empty_node){
-}
-
-infer_type(stmt_block){
-}
-
-infer_type(id){
-}
-
-exec(empty_node){
-
-}
-
-exec(stmt_block){
-    first->exec(vars);
-    next->exec(vars);
-}
-
-exec(print){
+exec(println){
     expr->exec(vars);
     expr->infer_type();
     if(expr->type == int_type)
@@ -423,8 +338,8 @@ exec(while_stmt){
 }
 
 exec(assign){
-    expression->exec(vars);
-    vars[id] = expression->value;
+    expr->exec(vars);
+    vars[id] = expr->value;
 }
 
 exec(plus){
@@ -499,78 +414,10 @@ exec(str){
     str_val = val;
 }
 
-    expression->exec(vars);
-    vars[id] = expression->value;
-}
-
-exec(plus){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value + expr2->value;
-}
-
-exec(minus){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value - expr2->value;
-}
-
-exec(multiply){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value * expr2->value;
-}
-
-exec(divide){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value / expr2->value;
-}
-
-exec(less){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value < expr2->value;
-}
-
-exec(greater){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value > expr2->value;
-}
-
-exec(gte){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value >= expr2->value;
-}
-
-exec(lte){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value <= expr2->value;
-}
-
-exec(equal){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = (expr1->value == expr2->value);
-}
-
-exec(nequal){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = (expr1->value != expr2->value);
-}
-
-exec(intnum){
-    value = num;
-}
-
-exec(id){
-    value = vars[id_val];
-}
-
-exec(str){
-    str_val = val;
-}
+exec(method_declaration){}
+exec(bool_expr){}
+exec(field_assign){}
+exec(field_declaration){}
+exec(print){}
+infer_type(bool_expr) {}
+exec(param_declaration){}
