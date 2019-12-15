@@ -30,5 +30,6 @@ include_directories(${PROJECT_SOURCE_DIR}/src/)
 add_executable(decaf  
                       decaf_parser.cpp
                       decaf_lexer.cpp
-                      decaf_ast.cpp 
+                      decaf_ast.cpp
+                      #${PROJECT_SOURCE_DIR}/src/decaf_x86gen.cpp
                       ${PROJECT_SOURCE_DIR}/src/main.cpp)

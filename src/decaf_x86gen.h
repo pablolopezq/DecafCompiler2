@@ -17,7 +17,7 @@ class GenX86 {
 public:
     GenX86(std::ostream & out) : out(out) {}
 
-    void write(std::vector<FuncDef> funcs){
+    void write(std::vector<FuncDef*> funcs){
 
         LiteralTable table;
 
@@ -25,16 +25,16 @@ public:
 
         for(auto f : funcs){
 
-            int num_params = f.getNumParams();
+            int num_params = f->getNumParams();
 
 
             out << "push ebp\n mov ebp, esp\n" <<
                     "add esp " << std::to_string(num_params*4) << "\n";
 
             /* generar codigo de f */
-            /* gen_asm(f, ); */
+            gen_asm(*f, table); 
 
-            out << f.getName() << "_end\n";
+            out << f->getName() << "_end\n";
             out << "leave\n ret\n";
 
         }
@@ -58,12 +58,16 @@ private:
 
         LiteralTable() : str_counter(0) {}
 
-        void addString(std::string str){
+        std::string addString(std::string str){
             std::unordered_map<std::string, std::string>::const_iterator it = literals.find(str);
 
             if(it == literals.end()){
                 std::string lbl = "SL" + std::to_string(str_counter++);
                 literals.emplace(str, lbl);
+                return lbl;
+            }
+            else{
+                return it->second;
             }
         }
 
@@ -72,7 +76,9 @@ private:
             if(it != literals.end()){
                 return it->second;
             }
-            return "-1";
+            else{
+                return this->addString(str);
+            }
         }
 
         std::unordered_map<std::string, std::string> getTable(){
@@ -94,6 +100,7 @@ private:
             NodeKind kind = stmt->getKind();
             switch(kind){
                 HANDLE_NODE(IDOperand);
+                HANDLE_NODE(StringOperand);
                 HANDLE_NODE(IntOperand);
                 HANDLE_NODE(AddExpr);
                 HANDLE_NODE(SubExpr);
@@ -107,8 +114,13 @@ private:
                 HANDLE_NODE(NequalExpr);
                 HANDLE_NODE(AssignStatement);
                 HANDLE_NODE(CallStatement);
+                HANDLE_NODE(ParamStatement);
                 HANDLE_NODE(RetStatement);
                 HANDLE_NODE(NopStatement);
+                
+                default:
+                    std::cout << "no visit for node\n";
+                    break;
             }
         }
         
@@ -140,12 +152,13 @@ private:
             }
         }
 
-        std::string visit(IntOperand * stmt);
-        std::string visit(IDOperand * stmt);
-        std::string visit(AddExpr * stmt);
-        std::string visit(SubExpr * stmt);
-        std::string visit(MultExpr * stmt);
-        std::string visit(DivExpr * stmt);
+        std::string visit(CFG::IntOperand * node);
+        std::string visit(IDOperand * node);
+        std::string visit(StringOperand * node);
+        std::string visit(AddExpr * node);
+        std::string visit(SubExpr * node);
+        std::string visit(MultExpr * node);
+        std::string visit(DivExpr * node);
         std::string visit(GreaterExpr * stmt);
         std::string visit(LessExpr * stmt);
         std::string visit(GTEExpr * stmt);
@@ -154,6 +167,7 @@ private:
         std::string visit(NequalExpr * stmt);
         std::string visit(AssignStatement * stmt);
         std::string visit(CallStatement * stmt);
+        std::string visit(ParamStatement * stmt);
         std::string visit(RetStatement * stmt);
         std::string visit(NopStatement * stmt);
 
@@ -180,39 +194,96 @@ private:
         std::vector<Node*> visited;
         std::queue<Node*> queue;
 
-        queue.push(func.getCFG()->first);
+        func.getCFG().second->setEdge(nullptr);
+        // func.getCFG().second->setLabel("last");
+
+        queue.push(func.getCFG().first);
 
         Visitor visitor(table, func);
+
+        std::cout << func.getName() << ":\n";
     
         while(true){
 
+            std::cout << "entered loop\n";
+            if(queue.empty()){
+                std::cout << "no more nodes\n";
+                break;
+            }
+            std::cout << "node in queue\n";
+
             Node * current_node = queue.front();
+
+            std::cout << "got node\n";
+            std::cout << current_node->getLabel() << std::endl;
+            // current_node->printStatements();
+
             queue.pop();
+
+            std::cout << "popped node\n";
+
+
+            if(current_node->label != "nop"){
+                std::cout << current_node->getLabel() + ":\n";
+                out << current_node->getLabel() + ":\n";
+            }
             
             std::vector<Node*>::iterator it = find(visited.begin(), visited.end(), current_node);
-            if(it != visited.end()){
+            if(it == visited.end()){
+                std::cout << "not visited\n";
                 visitor.setCurrentNode(current_node);
                 for(auto stmt : current_node->statements){
+                    std::cout << visitor.visit(stmt) << std::endl;
                     out << visitor.visit(stmt);
                 }
                 visited.push_back(current_node);
+                if(current_node->getEdge() == nullptr){
+                    std::cout << "no edge\n";
+                    continue;
+                }
+                std::cout << "getting edge\n";
                 Edge * edge = current_node->getEdge();
+                    
                 if(edge->isSingle()){
+                    std::cout << "a\n";
                     /* add single node */
                     SingleEdge * se = reinterpret_cast<SingleEdge*>(edge);
-                    out << visitor.visit(se);
+                    std::cout << "a\n";
+                    if(se->next == nullptr){
+                        std::cout << "b\n";
+                    }
+                    std::cout << "a\n";
+                    // std::cout << se->next->label << std::endl;
+                    if(se->next->label != "nop"){
+                        std::cout << "adding single edge\n";
+                        std::cout << visitor.visit(se) << std::endl;
+                        out << visitor.visit(se);
+                    }
+                    else {
+                        std::cout << "a\n";
+                    }
+                    std::cout << "a\n";
                     queue.push(se->next);
+                    std::cout << "a\n";
                 }
                 else{
                     /* add both nodes */
+                    // std::cout << "adding double edge\n";
                     DoubleEdge * de = reinterpret_cast<DoubleEdge*>(edge);
+                    
+                    std::cout << visitor.visit(de) << std::endl;
                     out << visitor.visit(de);
-                    queue.push(de->tnode);
-                    queue.push(de->fnode);
+                    if(de->tnode->getKind() != NodeKind::NopNode)
+                        queue.push(de->tnode);
+                    if(de->fnode->getKind() != NodeKind::NopNode)
+                        queue.push(de->fnode);
                 }
             }
         }
+        std::cout << "done with func\n";
     }
 };
+
+#include "decaf_x86gen.cpp"
 
 #endif // x86GEN

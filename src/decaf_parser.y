@@ -2,6 +2,7 @@
 %language "C++"
 %parse-param { DecafLexer& lexer }
 %parse-param { YYNODESTATE nodes }
+%parse-param { std::vector<FuncDef*> &funcs }
 %define parse.error verbose
 %define api.value.type variant
 %define api.parser.class {DecafParser}
@@ -59,14 +60,16 @@
 
 program : KW_CLASS IDENT '{' program_block '}' { std::cout << "Parsed successfully\n"; 
                                                 
-                                                std::vector<FuncDef*> funcs;
+                                                FuncDef * fd;
 
                                                 for(auto s : $4){
-                                                    std::cout << s->toString();
-                                                    method_declaration * md = static_cast<method_declaration*>(s);
-                                                    std::cout << md->toString();
-                                                    FuncDef * fd = md->genFunc();
-                                                    //std::cout << fd->getName() << std::endl;
+                                                    //std::cout << s->toString();
+                                                    method_declaration * md = dynamic_cast<method_declaration*>(s);
+                                                    if(md != nullptr){
+                                                        fd = md->genFunc();
+                                                        funcs.push_back(fd);
+                                                    }
+                                                    
                                                 }
                                                }
 ;

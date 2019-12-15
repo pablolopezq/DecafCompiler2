@@ -1,10 +1,12 @@
 #include <iostream>
 #include <fstream>
 
+#include "decaf_x86gen.h"
 #include "decaf_tokens.h"
 #include "decaf_ast.h"
 #include "decaf_lexer.h"
 #include "decaf_cfg.h"
+#include "funcdef.h"
 
 int main(int argc, char * argv[]){
 
@@ -75,14 +77,28 @@ int main(int argc, char * argv[]){
         DecafLexer lexer(in);
 
         YYNODESTATE nodes;
+        std::vector<FuncDef*> funcs;
         // ASTNode * statements;
 
         // std::unordered_map<std::string, int> vars;
 
         // Expr::Parser parser(lexer, nodes, statements);
-        Decaf::DecafParser parser(lexer, nodes);
+        Decaf::DecafParser parser(lexer, nodes, funcs);
 
         parser.parse();
+
+        // for(auto f : funcs){
+        //     std::cout << "printing\n";
+        //     std::cout << f->getName() << std::endl;
+        // }
+
+        std::filebuf outfile;
+        outfile.open("out.asm", std::ios::out);
+        std::ostream out(&outfile);
+
+        GenX86 genasm(out);
+        genasm.write(funcs);
+        outfile.close();
 
         // std::cout << "Parsed and created AST\n";
 

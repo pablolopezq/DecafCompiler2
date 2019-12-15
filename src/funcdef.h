@@ -4,7 +4,6 @@
 #include <string>
 #include <unordered_map>
 
-#include "decaf_ast.h"
 #include "decaf_cfg.h"
 
 class FuncDef {
@@ -12,7 +11,7 @@ class FuncDef {
 using CFGTuple = std::pair<CFG::Node*, CFG::Node*>;
 
 public:
-    FuncDef(std::string name, CFGTuple * cfg)
+    FuncDef(std::string name, CFGTuple cfg)
     : name(name), cfg(cfg){}
 
     int getNumParams(){
@@ -23,14 +22,14 @@ public:
         return name;
     }
 
-    CFGTuple * getCFG(){
+    CFGTuple getCFG(){
         return cfg;
     }
 
 private:
     std::string name; 
     std::vector<CFG::Operand*> params;
-    CFGTuple * cfg;
+    CFGTuple cfg;
 
 };
 

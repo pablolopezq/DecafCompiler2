@@ -43,6 +43,7 @@ enum class NodeKind {
     NopNode,
     IfStatement,
     ParamStatement,
+    Node,
 };
 
 class Base {
@@ -322,7 +323,6 @@ public:
         return NodeKind::ParamStatement;
     }
 
-private:
     Operand * op;
 
 };
@@ -411,20 +411,23 @@ public:
             edge->printNodes();
     }
 
+    NodeKind getKind(){
+        return NodeKind::Node;
+    }
+
+    void setNop(){
+        nop = true;
+    }
+
+    bool isNop(){
+        return nop;
+    }
+
+    bool nop;
     std::string label;
     Edge * edge;
     Statement * stmt;
     std::vector<Statement*> statements;
-};
-
-class NopNode : public Node {
-
-public:
-    NopNode(){}
-
-    NodeKind getKind(){
-        return NodeKind::NopNode;
-    }
 };
 
 class SingleEdge : public Edge {

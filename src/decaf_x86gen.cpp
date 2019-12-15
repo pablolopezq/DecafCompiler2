@@ -1,7 +1,13 @@
 #include "decaf_x86gen.h"
 
-std::string GenX86::Visitor::visit(IntOperand * node){
+std::string GenX86::Visitor::visit(CFG::IntOperand * node){
     return node->toString();
+}
+
+std::string GenX86::Visitor::visit(CFG::StringOperand * node){
+    std::string val = node->toString();
+    std::string label = this->table.getLabel(val);
+    return label;
 }
 
 std::string GenX86::Visitor::visit(IDOperand * node){
@@ -108,6 +114,26 @@ std::string GenX86::Visitor::visit(AssignStatement * node){
     return ret;
 }
 
+std::string GenX86::Visitor::visit(CallStatement * node){
+    std::string ret;
+
+    ret = "call " + node->func_name;
+
+    return ret;
+}
+
+std::string GenX86::Visitor::visit(ParamStatement * node){
+    std::string ret;
+
+    ret = "push " + visit(node->op);
+
+    return ret;
+}
+
+std::string GenX86::Visitor::visit(NopStatement * node){
+    return "nop";
+}
+
 std::string GenX86::Visitor::visit(RetStatement * node){
     return "jmp " + func.getName() + "_end\n";
 }
@@ -117,5 +143,14 @@ std::string GenX86::Visitor::visit(SingleEdge * edge){
 }
 
 std::string GenX86::Visitor::visit(DoubleEdge * edge){
-    return visit(edge->condition) + getJmp(edge->condition) + edge->tnode->label + "\n" + "jmp " + edge->fnode->label + "\n";
+
+    std::string ret = "";
+
+    if(edge->tnode->getKind() != NodeKind::NopNode){
+        ret += visit(edge->condition) + getJmp(edge->condition) + edge->tnode->label + "\n";
+    }
+    if(edge->fnode->getKind() != NodeKind::NopNode){
+        ret += "jmp " + edge->fnode->label + "\n";
+    }
+    return ret;
 }

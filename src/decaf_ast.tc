@@ -9,8 +9,8 @@
     #include <vector>
     #include <utility>
 
-    #include "decaf_cfg.h"
     #include "funcdef.h"
+    #include "decaf_cfg.h"
 
     class statement;
 
@@ -154,7 +154,9 @@
 
 genFunc(method_declaration){
     CFGTuple t = block->AST2CFG();
-    Func f = new FuncDef("test", &t);
+    t.second->setLabel("a");
+    std::cout << "a\n";
+    Func f = new FuncDef("test", t);
     return f;
 }
 
@@ -172,29 +174,36 @@ AST2CFG(method_declaration){}
 AST2CFG(println){
     unary * u = static_cast<unary*>(expr);
     CFG::Operand * op = u->OP2CFG();
-    std::cout << op->toString() << std::endl;
     CFG::ParamStatement * par = new CFG::ParamStatement(op);
     CFG::CallStatement * call = new CFG::CallStatement("printf", 1);
 
     CFG::Node * n = new CFG::Node();
+    n->setLabel("println");
     n->addStatement(par);
     n->addStatement(call);
-    CFG::NopNode * nop = new CFG::NopNode();
+    CFG::Node * nop = new CFG::Node();
+    nop->setLabel("nop");
+    nop->setNop();
     n->setEdge(new SingleEdge(nop));
+    std::cout << "println\n";
     return std::make_pair(n, nop);
 }
+
 AST2CFG(print){
     unary * u = static_cast<unary*>(expr);
     CFG::Operand * op = u->OP2CFG();
-    std::cout << op->toString() << std::endl;
     CFG::ParamStatement * par = new CFG::ParamStatement(op);
     CFG::CallStatement * call = new CFG::CallStatement("printf", 1);
 
     CFG::Node * n = new CFG::Node();
+    n->setLabel("print");
     n->addStatement(par);
     n->addStatement(call);
-    CFG::NopNode * nop = new CFG::NopNode();
+    CFG::Node * nop = new CFG::Node();
+    nop->setLabel("nop");
+    nop->setNop();
     n->setEdge(new SingleEdge(nop));
+    std::cout << "print\n";
     return std::make_pair(n, nop);
 }
 
