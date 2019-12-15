@@ -24,6 +24,7 @@
     #include "decaf_lexer.h"
     #include "decaf_ast.h"
     #include "decaf_tokens.h"
+    #include "funcdef.h"
 
     #define yylex(arg) lexer.getNextToken(arg)
 
@@ -45,8 +46,8 @@
 
 %type<expression*> expr constant
 %type<statement*> system_call stmt var_decl block_body block
-%type<statement*> program_block field_decl method_decl decl
-%type<std::vector<statement*>> params
+%type<statement*> field_decl method_decl decl
+%type<std::vector<statement*>> params program_block
 %type<std::vector<std::string>> multiple_decl
 %type<type_code> type
 
@@ -56,12 +57,22 @@
 
 %%
 
-program : KW_CLASS IDENT '{' program_block '}' { std::cout << "Parsed successfully\n"; std::cout << $4->toString() << "\n"; }
+program : KW_CLASS IDENT '{' program_block '}' { std::cout << "Parsed successfully\n"; 
+                                                
+                                                std::vector<FuncDef*> funcs;
+
+                                                for(auto s : $4){
+                                                    std::cout << s->toString();
+                                                    method_declaration * md = static_cast<method_declaration*>(s);
+                                                    std::cout << md->toString();
+                                                    FuncDef * fd = md->genFunc();
+                                                    //std::cout << fd->getName() << std::endl;
+                                                }
+                                               }
 ;
 
-program_block : field_decl program_block { $$ = nodes.stmt_blockCreate($1, $2);}
-              | method_decl program_block { $$ = nodes.stmt_blockCreate($1, $2); }
-              | %empty { $$ = nodes.empty_nodeCreate(); }
+program_block : program_block method_decl { $1.push_back($2); $$ = $1; }
+              | %empty { $$.push_back(nodes.empty_nodeCreate()); }
 ;
 
 field_decl : type IDENT ASSIGN constant ';' {  $$ = nodes.field_assignCreate($1, $2, $4); }
@@ -107,6 +118,7 @@ var_decl : type multiple_decl ';' { $$ = nodes.field_declarationCreate($1, $2); 
 
 stmt : IDENT ASSIGN expr ';' {  $$ = nodes.assignCreate($1, $3);  }
      | system_call {  $$ = $1;  }
+     | KW_FOR '('  ')'
 ;
 
 system_call : PRINT '(' expr ')' ';' {  $$ = nodes.printCreate($3);  }

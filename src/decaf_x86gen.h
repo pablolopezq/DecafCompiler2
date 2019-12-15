@@ -111,6 +111,9 @@ private:
                 HANDLE_NODE(NopStatement);
             }
         }
+        
+        std::string visit(SingleEdge * edge);
+        std::string visit(DoubleEdge * edge);
 
         void setCurrentNode(Node * node){
             current_node = node;
@@ -177,7 +180,7 @@ private:
         std::vector<Node*> visited;
         std::queue<Node*> queue;
 
-        queue.push(func.getRoot());
+        queue.push(func.getCFG()->first);
 
         Visitor visitor(table, func);
     
@@ -197,11 +200,13 @@ private:
                 if(edge->isSingle()){
                     /* add single node */
                     SingleEdge * se = reinterpret_cast<SingleEdge*>(edge);
+                    out << visitor.visit(se);
                     queue.push(se->next);
                 }
                 else{
                     /* add both nodes */
                     DoubleEdge * de = reinterpret_cast<DoubleEdge*>(edge);
+                    out << visitor.visit(de);
                     queue.push(de->tnode);
                     queue.push(de->fnode);
                 }

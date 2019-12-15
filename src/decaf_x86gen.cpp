@@ -103,7 +103,7 @@ std::string GenX86::Visitor::visit(NequalExpr * node){
 std::string GenX86::Visitor::visit(AssignStatement * node){
     std::string ret;
 
-    ret = visit(node->expr) + "\nmov [ebp-" + std::to_string(get_offset(node->ident)) + "], eax\n";
+    ret = visit(node->expr) + "\nmov [ebp-" + std::to_string(get_offset(node->ident->toString())) + "], eax\n";
 
     return ret;
 }
@@ -112,6 +112,10 @@ std::string GenX86::Visitor::visit(RetStatement * node){
     return "jmp " + func.getName() + "_end\n";
 }
 
-std::string GenX86::Visitor::visit(IfStatement * node){
-    return visit(node->expr) + getJmp(node->expr) + " " + ;
+std::string GenX86::Visitor::visit(SingleEdge * edge){
+    return "jmp " + edge->next->label;
+}
+
+std::string GenX86::Visitor::visit(DoubleEdge * edge){
+    return visit(edge->condition) + getJmp(edge->condition) + edge->tnode->label + "\n" + "jmp " + edge->fnode->label + "\n";
 }

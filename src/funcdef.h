@@ -4,14 +4,16 @@
 #include <string>
 #include <unordered_map>
 
-#include "build/decaf_ast.h"
+#include "decaf_ast.h"
 #include "decaf_cfg.h"
 
 class FuncDef {
 
+using CFGTuple = std::pair<CFG::Node*, CFG::Node*>;
+
 public:
-    FuncDef(std::string name, std::unordered_map<type_code, std::string> params, CFG::Node * root)
-    : name(name), params(params), root(root){}
+    FuncDef(std::string name, CFGTuple * cfg)
+    : name(name), cfg(cfg){}
 
     int getNumParams(){
         return params.size();
@@ -21,14 +23,14 @@ public:
         return name;
     }
 
-    Node * getRoot(){
-        return root;
+    CFGTuple * getCFG(){
+        return cfg;
     }
 
 private:
     std::string name; 
-    std::unordered_map<type_code, std::string> params;
-    CFG::Node * root;
+    std::vector<CFG::Operand*> params;
+    CFGTuple * cfg;
 
 };
 

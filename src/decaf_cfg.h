@@ -38,7 +38,11 @@ enum class NodeKind {
     CallStatement,
     RetStatement,
     NopStatement,
-    IfStatement
+    LValueOperand,
+    StringOperand,
+    NopNode,
+    IfStatement,
+    ParamStatement,
 };
 
 class Base {
@@ -50,7 +54,7 @@ public:
 
 class Expr : public Base {};
 
-class Operand : public Expr {};
+class Operand : public Base {};
 
 class IDOperand : public Operand {
 
@@ -67,6 +71,39 @@ public:
         return NodeKind::IDOperand;
     }
 };
+
+class StringOperand : public Operand {
+
+public:
+    StringOperand(std::string val) : val(val) {}
+
+    std::string val;
+
+    std::string toString() {
+        return val;
+    }
+
+    NodeKind getKind(){
+        return NodeKind::StringOperand;
+    }
+};
+
+class LValueOperand : public Operand {
+
+public:
+    LValueOperand(std::string val) : val(val) {}
+
+    std::string val;
+
+    std::string toString() {
+        return val;
+    }
+
+    NodeKind getKind(){
+        return NodeKind::LValueOperand;
+    }
+};
+
 class IntOperand : public Operand {
 
 public:
@@ -258,31 +295,35 @@ public:
 class AssignStatement : public Statement {
 
 public:
-    AssignStatement(std::string ident, Expr * expr) : ident(ident), expr(expr) {}
+    AssignStatement(LValueOperand * ident, Expr * expr) : ident(ident), expr(expr) {}
 
     std::string toString() {
-        return ident + " = " + expr->toString();
+        return ident->toString() + " = " + expr->toString();
     }
 
     NodeKind getKind(){
         return NodeKind::AssignStatement;
     }
 
-    std::string ident;
+    LValueOperand * ident;
     Expr * expr;
 };
 
 class ParamStatement : public Statement {
 
 public:
-    ParamStatement(Expr * expr) : expr(expr) {}
+    ParamStatement(Operand * operand) : op(operand) {}
 
     std::string toString(){
-        return "param " + expr->toString();
+        return "param " + op->toString();
+    }
+
+    NodeKind getKind(){
+        return NodeKind::ParamStatement;
     }
 
 private:
-    Expr * expr;
+    Operand * op;
 
 };
 
@@ -334,7 +375,7 @@ public:
 class Node {
 
 public:
-    Node(std::string label) : label(label) {}
+    Node(){}
 
     void addStatement(Statement * stmt){
         this->stmt = stmt;
@@ -346,6 +387,14 @@ public:
         this->edge = edge;
     }
 
+    void setLabel(std::string label){
+        this->label = label;
+    }
+
+    std::string getLabel(){
+        return this->label;
+    }
+
     Edge * getEdge(){
         return this->edge;
     }
@@ -354,8 +403,6 @@ public:
         for(int i = 0; i < statements.size(); i++){
             std::cout << statements.at(i)->toString() << std::endl;
         }
-
-        // std::cout << stmt->toString() << std::endl;
     }
 
     void printCFG(){
@@ -368,6 +415,16 @@ public:
     Edge * edge;
     Statement * stmt;
     std::vector<Statement*> statements;
+};
+
+class NopNode : public Node {
+
+public:
+    NopNode(){}
+
+    NodeKind getKind(){
+        return NodeKind::NopNode;
+    }
 };
 
 class SingleEdge : public Edge {
@@ -399,6 +456,7 @@ public:
         return false;
     }
 
+    Expr * condition;
     Node * tnode;
     Node * fnode;
 };

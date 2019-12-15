@@ -7,13 +7,22 @@
     #include <cmath>
     #include <unordered_map>
     #include <vector>
+    #include <utility>
+
+    #include "decaf_cfg.h"
+    #include "funcdef.h"
 
     class statement;
+
+    using CFGTuple = std::pair<CFG::Node*, CFG::Node*>;
+    using CFGExpr = CFG::Expr*;
+    using CFGOP = CFG::Operand*;
 
     using string_t = std::string;
     using string_v = std::vector<std::string>;
     using map_t = std::unordered_map<std::string, int>;
     using paramv_t = std::vector<statement*>;
+    using Func = FuncDef*;
 %}
 
 %{
@@ -46,22 +55,24 @@
     expression *expr2;
 }
 
-%node intnum expression = 
+%node unary expression %abstract = {}
+
+%node intnum unary = 
 {
     int num;
 }
 
-%node str expression =
+%node str unary =
 {
     string_t val;
 }
 
-%node id expression =
+%node id unary =
 {
     string_t id_val;
 }
 
-%node bool_expr expression =
+%node bool_expr unary =
 {
     bool b_val;
 }
@@ -136,6 +147,84 @@
 %operation %virtual void exec(ASTNode *this, map_t & vars)
 %operation %virtual void infer_type(expression * this)
 %operation %virtual string_t toString(ASTNode * this)
+%operation %virtual CFGTuple AST2CFG(statement * this)
+%operation %virtual CFGExpr EXPR2CFG(binary * this)
+%operation %virtual CFGOP OP2CFG(unary * this)
+%operation %virtual Func genFunc(method_declaration * this)
+
+genFunc(method_declaration){
+    CFGTuple t = block->AST2CFG();
+    Func f = new FuncDef("test", &t);
+    return f;
+}
+
+AST2CFG(stmt_block){
+    CFGTuple f = first->AST2CFG();
+    CFGTuple n = next->AST2CFG();
+
+    CFG::SingleEdge * se = new SingleEdge(n.first);
+    f.second->setEdge(se);
+    return std::make_pair(f.first, n.second);
+}
+
+AST2CFG(method_declaration){}
+
+AST2CFG(println){
+    unary * u = static_cast<unary*>(expr);
+    CFG::Operand * op = u->OP2CFG();
+    std::cout << op->toString() << std::endl;
+    CFG::ParamStatement * par = new CFG::ParamStatement(op);
+    CFG::CallStatement * call = new CFG::CallStatement("printf", 1);
+
+    CFG::Node * n = new CFG::Node();
+    n->addStatement(par);
+    n->addStatement(call);
+    CFG::NopNode * nop = new CFG::NopNode();
+    n->setEdge(new SingleEdge(nop));
+    return std::make_pair(n, nop);
+}
+AST2CFG(print){
+    unary * u = static_cast<unary*>(expr);
+    CFG::Operand * op = u->OP2CFG();
+    std::cout << op->toString() << std::endl;
+    CFG::ParamStatement * par = new CFG::ParamStatement(op);
+    CFG::CallStatement * call = new CFG::CallStatement("printf", 1);
+
+    CFG::Node * n = new CFG::Node();
+    n->addStatement(par);
+    n->addStatement(call);
+    CFG::NopNode * nop = new CFG::NopNode();
+    n->setEdge(new SingleEdge(nop));
+    return std::make_pair(n, nop);
+}
+
+OP2CFG(intnum){
+    return new CFG::IntOperand(num);
+}
+
+OP2CFG(str){
+    return new CFG::StringOperand(val);
+}
+
+OP2CFG(id){}
+OP2CFG(bool_expr){}
+EXPR2CFG(plus){}
+EXPR2CFG(minus){}
+EXPR2CFG(multiply){}
+EXPR2CFG(divide){}
+EXPR2CFG(greater){}
+EXPR2CFG(less){}
+EXPR2CFG(gte){}
+EXPR2CFG(lte){}
+EXPR2CFG(equal){}
+EXPR2CFG(nequal){}
+AST2CFG(ifStmt){}
+AST2CFG(param_declaration){}
+AST2CFG(field_assign){}
+AST2CFG(field_declaration){}
+AST2CFG(assign){}
+AST2CFG(while_stmt){}
+AST2CFG(empty_node){}
 
 toString(intnum){
     return std::to_string(num);
@@ -192,14 +281,16 @@ toString(ifStmt){
 }
 toString(method_declaration){
     std::string tp;
-    if(t == int_type) { tp = "int"; } else { tp = "bool"; }
+    if(t == int_type) { tp = "int"; } 
+    else if(t == bool_type ){ tp = "bool"; }
+    else { tp = "void"; }
 
     std::string params_s;
     for(int i = 0; i < params.size(); i++){
         params_s += params.at(i)->toString();
     }
 
-    return (tp + " " + name + "(" + params_s + "){\n" + block->toString() + "\n}\n");
+    return (tp + " " + name + "(" + params_s + "){\n" + block->toString() + "}\n");
 }
 toString(param_declaration){
     std::string tp;
@@ -319,6 +410,18 @@ exec(println){
     }
 }
 
+exec(print){
+    expr->exec(vars);
+    expr->infer_type();
+    if(expr->type == int_type)
+        std::cout << expr->value;
+    else{
+        expr->str_val.erase(0,1);
+        expr->str_val.erase(expr->str_val.size() - 1);
+        std::cout << expr->str_val;
+    }
+}
+
 exec(ifStmt){
     condition->exec(vars);
     if(condition->value){
@@ -418,6 +521,5 @@ exec(method_declaration){}
 exec(bool_expr){}
 exec(field_assign){}
 exec(field_declaration){}
-exec(print){}
 infer_type(bool_expr) {}
 exec(param_declaration){}
