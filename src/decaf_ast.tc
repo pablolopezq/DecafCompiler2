@@ -30,6 +30,9 @@
     #include <iostream>
     #include <stdio.h>
     void yyerror(const char *msg);
+
+    int label_counter = 0;
+    int var_counter = 0;
 %}
 
 %enum type_code = 
@@ -151,6 +154,50 @@
 %operation %virtual CFGExpr EXPR2CFG(binary * this)
 %operation %virtual CFGOP OP2CFG(unary * this)
 %operation %virtual Func genFunc(method_declaration * this)
+%operation %virtual bool isUnary(expression * this)
+
+isUnary(plus){
+    return false;
+}
+isUnary(minus){
+    return false;
+}
+isUnary(multiply){
+    return false;
+}
+isUnary(divide){
+    return false;
+}
+isUnary(greater){
+    return false;
+}
+isUnary(less){
+    return false;
+}
+isUnary(gte){
+    return false;
+}
+isUnary(lte){
+    return false;
+}
+isUnary(equal){
+    return false;
+}
+isUnary(nequal){
+    return false;
+}
+isUnary(intnum){
+    return true;
+}
+isUnary(str){
+    return true;
+}
+isUnary(id){
+    return true;
+}
+isUnary(bool_expr){
+    return true;
+}
 
 genFunc(method_declaration){
     CFGTuple t = block->AST2CFG();
@@ -170,14 +217,24 @@ AST2CFG(stmt_block){
 AST2CFG(method_declaration){}
 
 AST2CFG(println){
+    CFG::Node * n = new CFG::Node();
     unary * u = static_cast<unary*>(expr);
     CFG::Operand * op = u->OP2CFG();
-    CFG::ParamStatement * par = new CFG::ParamStatement(op);
+    if(op->getKind() == NodeKind::IntOperand){
+        CFG::ParamStatement * par = new CFG::ParamStatement(op);
+        CFG::StringOperand * s = new CFG::StringOperand("a%da");
+        CFG::ParamStatement * par1 = new CFG::ParamStatement(s);
+        n->addStatement(par);
+        n->addStatement(par1);
+    }
+    else{
+        CFG::ParamStatement * par = new CFG::ParamStatement(op);
+        n->addStatement(par);
+    }
     CFG::CallStatement * call = new CFG::CallStatement("printf", 1);
 
-    CFG::Node * n = new CFG::Node();
-    n->setLabel("println");
-    n->addStatement(par);
+    std::string lbl = "LBL" + std::to_string(label_counter++);
+    n->setLabel(lbl);
     n->addStatement(call);
     CFG::Node * nop = new CFG::Node();
     nop->setLabel("nop");
@@ -188,43 +245,192 @@ AST2CFG(println){
 }
 
 AST2CFG(print){
+    CFG::Node * n = new CFG::Node();
     unary * u = static_cast<unary*>(expr);
     CFG::Operand * op = u->OP2CFG();
-    CFG::ParamStatement * par = new CFG::ParamStatement(op);
+    if(op->getKind() == NodeKind::IntOperand){
+        CFG::ParamStatement * par = new CFG::ParamStatement(op);
+        CFG::StringOperand * s = new CFG::StringOperand("%d");
+        CFG::ParamStatement * par1 = new CFG::ParamStatement(s);
+        n->addStatement(par);
+        n->addStatement(par1);
+    }
+    else{
+        CFG::ParamStatement * par = new CFG::ParamStatement(op);
+        n->addStatement(par);
+    }
     CFG::CallStatement * call = new CFG::CallStatement("printf", 1);
 
-    CFG::Node * n = new CFG::Node();
-    n->setLabel("print");
-    n->addStatement(par);
+    std::string lbl = "LBL" + std::to_string(label_counter++);
+    n->setLabel(lbl);
     n->addStatement(call);
     CFG::Node * nop = new CFG::Node();
     nop->setLabel("nop");
     nop->setNop();
     n->setEdge(new SingleEdge(nop));
-    //std::cout << "print\n";
+    //std::cout << "println\n";
     return std::make_pair(n, nop);
 }
 
 OP2CFG(intnum){
-    return new CFG::IntOperand(num);
+    CFG::IntOperand * ret = new CFG::IntOperand(num);
+    return ret;
 }
 
 OP2CFG(str){
-    return new CFG::StringOperand(val);
+    CFG::StringOperand * ret = new CFG::StringOperand(val);
+    return ret;
 }
 
-OP2CFG(id){}
-OP2CFG(bool_expr){}
-EXPR2CFG(plus){}
-EXPR2CFG(minus){}
-EXPR2CFG(multiply){}
-EXPR2CFG(divide){}
-EXPR2CFG(greater){}
-EXPR2CFG(less){}
-EXPR2CFG(gte){}
-EXPR2CFG(lte){}
-EXPR2CFG(equal){}
-EXPR2CFG(nequal){}
+OP2CFG(id){
+    CFG::IDOperand * ret = new CFG::IDOperand(id_val);
+    return ret;
+}
+OP2CFG(bool_expr){
+    CFG::BoolOperand * ret = new CFG::BoolOperand(b_val);
+    return ret;
+}
+
+EXPR2CFG(plus){
+    CFG::Operand * op1;
+    CFG::Operand * op2;
+    if(expr1->isUnary()){
+        unary * u1 = static_cast<unary*>(expr1);
+        op1 = u1->OP2CFG();
+    }
+    if(expr2->isUnary()){
+        unary * u2 = static_cast<unary*>(expr2);
+        op2 = u2->OP2CFG();
+    }
+    CFG::AddExpr * add = new CFG::AddExpr(op1, op2);
+    return add;
+}
+EXPR2CFG(minus){
+    CFG::Operand * op1;
+    CFG::Operand * op2;
+    if(expr1->isUnary()){
+        unary * u1 = static_cast<unary*>(expr1);
+        op1 = u1->OP2CFG();
+    }
+    if(expr2->isUnary()){
+        unary * u2 = static_cast<unary*>(expr2);
+        op2 = u2->OP2CFG();
+    }
+    CFG::SubExpr * sub = new CFG::SubExpr(op1, op2);
+    return sub;
+}
+EXPR2CFG(multiply){
+    CFG::Operand * op1;
+    CFG::Operand * op2;
+    if(expr1->isUnary()){
+        unary * u1 = static_cast<unary*>(expr1);
+        op1 = u1->OP2CFG();
+    }
+    if(expr2->isUnary()){
+        unary * u2 = static_cast<unary*>(expr2);
+        op2 = u2->OP2CFG();
+    }
+    CFG::MultExpr * mul = new CFG::MultExpr(op1, op2);
+    return mul;
+}
+EXPR2CFG(divide){
+    CFG::Operand * op1;
+    CFG::Operand * op2;
+    if(expr1->isUnary()){
+        unary * u1 = static_cast<unary*>(expr1);
+        op1 = u1->OP2CFG();
+    }
+    if(expr2->isUnary()){
+        unary * u2 = static_cast<unary*>(expr2);
+        op2 = u2->OP2CFG();
+    }
+    CFG::DivExpr * div = new CFG::DivExpr(op1, op2);
+    return div;
+}
+EXPR2CFG(greater){
+    CFG::Operand * op1;
+    CFG::Operand * op2;
+    if(expr1->isUnary()){
+        unary * u1 = static_cast<unary*>(expr1);
+        op1 = u1->OP2CFG();
+    }
+    if(expr2->isUnary()){
+        unary * u2 = static_cast<unary*>(expr2);
+        op2 = u2->OP2CFG();
+    }
+    CFG::GreaterExpr * g = new CFG::GreaterExpr(op1, op2);
+    return g;
+}
+EXPR2CFG(less){
+    CFG::Operand * op1;
+    CFG::Operand * op2;
+    if(expr1->isUnary()){
+        unary * u1 = static_cast<unary*>(expr1);
+        op1 = u1->OP2CFG();
+    }
+    if(expr2->isUnary()){
+        unary * u2 = static_cast<unary*>(expr2);
+        op2 = u2->OP2CFG();
+    }
+    CFG::LessExpr * less = new CFG::LessExpr(op1, op2);
+    return less;
+}
+EXPR2CFG(gte){
+    CFG::Operand * op1;
+    CFG::Operand * op2;
+    if(expr1->isUnary()){
+        unary * u1 = static_cast<unary*>(expr1);
+        op1 = u1->OP2CFG();
+    }
+    if(expr2->isUnary()){
+        unary * u2 = static_cast<unary*>(expr2);
+        op2 = u2->OP2CFG();
+    }
+    CFG::GTEExpr * gte = new CFG::GTEExpr(op1, op2);
+    return gte;
+}
+EXPR2CFG(lte){
+    CFG::Operand * op1;
+    CFG::Operand * op2;
+    if(expr1->isUnary()){
+        unary * u1 = static_cast<unary*>(expr1);
+        op1 = u1->OP2CFG();
+    }
+    if(expr2->isUnary()){
+        unary * u2 = static_cast<unary*>(expr2);
+        op2 = u2->OP2CFG();
+    }
+    CFG::LTEExpr * lte = new CFG::LTEExpr(op1, op2);
+    return lte;
+}
+EXPR2CFG(equal){
+    CFG::Operand * op1;
+    CFG::Operand * op2;
+    if(expr1->isUnary()){
+        unary * u1 = static_cast<unary*>(expr1);
+        op1 = u1->OP2CFG();
+    }
+    if(expr2->isUnary()){
+        unary * u2 = static_cast<unary*>(expr2);
+        op2 = u2->OP2CFG();
+    }
+    CFG::EqualExpr * equal = new CFG::EqualExpr(op1, op2);
+    return equal;
+}
+EXPR2CFG(nequal){
+    CFG::Operand * op1;
+    CFG::Operand * op2;
+    if(expr1->isUnary()){
+        unary * u1 = static_cast<unary*>(expr1);
+        op1 = u1->OP2CFG();
+    }
+    if(expr2->isUnary()){
+        unary * u2 = static_cast<unary*>(expr2);
+        op2 = u2->OP2CFG();
+    }
+    CFG::NequalExpr * nequal = new CFG::NequalExpr(op1, op2);
+    return nequal;
+}
 AST2CFG(ifStmt){}
 AST2CFG(param_declaration){}
 AST2CFG(field_assign){}

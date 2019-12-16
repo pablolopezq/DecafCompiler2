@@ -121,7 +121,6 @@ var_decl : type multiple_decl ';' { $$ = nodes.field_declarationCreate($1, $2); 
 
 stmt : IDENT ASSIGN expr ';' {  $$ = nodes.assignCreate($1, $3);  }
      | system_call {  $$ = $1;  }
-     | KW_FOR '('  ')'
 ;
 
 system_call : PRINT '(' expr ')' ';' {  $$ = nodes.printCreate($3);  }

@@ -216,7 +216,7 @@ private:
 
             queue.pop();
 
-            if(current_node->label != "nop"){
+            if(!current_node->isNop()){
                 std::cout << current_node->getLabel() + ":\n";
                 out << current_node->getLabel() + ":\n";
             }

@@ -44,6 +44,7 @@ enum class NodeKind {
     IfStatement,
     ParamStatement,
     Node,
+    BoolOperand,
 };
 
 class Base {
@@ -118,6 +119,22 @@ public:
 
     NodeKind getKind(){
         return NodeKind::IntOperand;
+    }
+};
+
+class BoolOperand : public Operand {
+
+public:
+    BoolOperand(int val) : val(val) {}
+
+    int val;
+
+    std::string toString() {
+        return std::to_string(val);
+    }
+
+    NodeKind getKind(){
+        return NodeKind::BoolOperand;
     }
 };
 
