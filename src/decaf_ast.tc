@@ -598,22 +598,24 @@ AST2CFG(assign){
 
     return std::make_pair(n, nop);
 }
-AST2CFG(ifStmt){}
-AST2CFG(param_declaration){}
-AST2CFG(field_assign){}
-AST2CFG(field_declaration){}
-AST2CFG(while_stmt){}
 AST2CFG(empty_node){
     CFG::Node * nop = new CFG::Node();
     nop->setLabel("nop");
     nop->setNop();
 
     CFG::Node * nop1 = new CFG::Node();
-    nop->setLabel("nop");
-    nop->setNop();
+    nop1->setLabel("nop");
+    nop1->setNop();
+
+    nop->setEdge(new SingleEdge(nop1));
 
     return std::make_pair(nop, nop1);
 }
+AST2CFG(ifStmt){}
+AST2CFG(param_declaration){}
+AST2CFG(field_assign){}
+AST2CFG(field_declaration){}
+AST2CFG(while_stmt){}
 
 toString(intnum){
     return std::to_string(num);

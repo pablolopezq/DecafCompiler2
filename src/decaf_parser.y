@@ -112,7 +112,7 @@ decl : type IDENT { $$ = nodes.param_declarationCreate($1, $2);  }
 block : '{' block_body '}' {  $$ = $2;  }
 ;
 
-block_body : var_decl block_body {  $$ = nodes.stmt_blockCreate($1, $2);  }
+block_body : var_decl block_body { $$ = nodes.stmt_blockCreate(nodes.empty_nodeCreate(), $2); std::cout << "vardecl\n";}
            | stmt block_body {  $$ = nodes.stmt_blockCreate($1, $2);  }
            | %empty {  $$ = nodes.empty_nodeCreate();  }
 ;
