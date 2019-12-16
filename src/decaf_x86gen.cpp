@@ -6,6 +6,8 @@ std::string GenX86::Visitor::visit(CFG::IntOperand * node){
 
 std::string GenX86::Visitor::visit(CFG::StringOperand * node){
     std::string val = node->toString();
+    val.erase(0,1);
+    val.erase(val.size() - 1);
     std::string label = this->table.getLabel(val);
     return label;
 }
@@ -117,7 +119,7 @@ std::string GenX86::Visitor::visit(AssignStatement * node){
 std::string GenX86::Visitor::visit(CallStatement * node){
     std::string ret;
 
-    ret = "call " + node->func_name;
+    ret = "call " + node->func_name + "\n";
 
     return ret;
 }
@@ -125,7 +127,7 @@ std::string GenX86::Visitor::visit(CallStatement * node){
 std::string GenX86::Visitor::visit(ParamStatement * node){
     std::string ret;
 
-    ret = "push " + visit(node->op);
+    ret = "push " + visit(node->op) + "\n";
 
     return ret;
 }
@@ -139,18 +141,14 @@ std::string GenX86::Visitor::visit(RetStatement * node){
 }
 
 std::string GenX86::Visitor::visit(SingleEdge * edge){
-    return "jmp " + edge->next->label;
+    return "jmp " + edge->next->label + "\n";
 }
 
 std::string GenX86::Visitor::visit(DoubleEdge * edge){
 
     std::string ret = "";
 
-    if(edge->tnode->getKind() != NodeKind::NopNode){
-        ret += visit(edge->condition) + getJmp(edge->condition) + edge->tnode->label + "\n";
-    }
-    if(edge->fnode->getKind() != NodeKind::NopNode){
-        ret += "jmp " + edge->fnode->label + "\n";
-    }
+    ret = visit(edge->condition) + getJmp(edge->condition) + edge->tnode->label + "\njmp " + edge->fnode->label + "\n";
+    
     return ret;
 }

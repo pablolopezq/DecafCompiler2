@@ -21,31 +21,31 @@ public:
 
         LiteralTable table;
 
+        out << "global main\n extern printf\n";
+
         out << "section .text\n";
 
         for(auto f : funcs){
 
             int num_params = f->getNumParams();
 
+            out << f->getName() << ":\n";
 
-            out << "push ebp\n mov ebp, esp\n" <<
-                    "add esp " << std::to_string(num_params*4) << "\n";
+            out << "push ebp\nmov ebp, esp\n" <<
+                    "add esp, " << std::to_string(num_params*4) << "\n";
 
             /* generar codigo de f */
             gen_asm(*f, table); 
 
-            out << f->getName() << "_end\n";
+            out << f->getName() << "_end:\n";
             out << "leave\n ret\n";
 
         }
-
-        out << "global main\n extern printf\n";
-        
         std::unordered_map<std::string, std::string> lits = table.getTable();
             
         out <<"section .data\n";
         for (auto& str: lits) {
-            out << str.second << ": db \"" << str.first << "\", 10\n";
+            out << str.second << ": db \'" << str.first << "\', 10, 0\n";
         }
     }
 
@@ -205,23 +205,16 @@ private:
     
         while(true){
 
-            std::cout << "entered loop\n";
             if(queue.empty()){
-                std::cout << "no more nodes\n";
                 break;
             }
-            std::cout << "node in queue\n";
 
             Node * current_node = queue.front();
 
-            std::cout << "got node\n";
-            std::cout << current_node->getLabel() << std::endl;
+            // std::cout << current_node->getLabel() << std::endl;
             // current_node->printStatements();
 
             queue.pop();
-
-            std::cout << "popped node\n";
-
 
             if(current_node->label != "nop"){
                 std::cout << current_node->getLabel() + ":\n";
@@ -230,7 +223,6 @@ private:
             
             std::vector<Node*>::iterator it = find(visited.begin(), visited.end(), current_node);
             if(it == visited.end()){
-                std::cout << "not visited\n";
                 visitor.setCurrentNode(current_node);
                 for(auto stmt : current_node->statements){
                     std::cout << visitor.visit(stmt) << std::endl;
@@ -238,33 +230,22 @@ private:
                 }
                 visited.push_back(current_node);
                 if(current_node->getEdge() == nullptr){
-                    std::cout << "no edge\n";
                     continue;
                 }
-                std::cout << "getting edge\n";
                 Edge * edge = current_node->getEdge();
                     
                 if(edge->isSingle()){
-                    std::cout << "a\n";
                     /* add single node */
                     SingleEdge * se = reinterpret_cast<SingleEdge*>(edge);
-                    std::cout << "a\n";
-                    if(se->next == nullptr){
-                        std::cout << "b\n";
-                    }
-                    std::cout << "a\n";
+                    // if(se->next == nullptr){
+                    //     std::cout << "b\n";
+                    // }
                     // std::cout << se->next->label << std::endl;
                     if(se->next->label != "nop"){
-                        std::cout << "adding single edge\n";
                         std::cout << visitor.visit(se) << std::endl;
                         out << visitor.visit(se);
                     }
-                    else {
-                        std::cout << "a\n";
-                    }
-                    std::cout << "a\n";
                     queue.push(se->next);
-                    std::cout << "a\n";
                 }
                 else{
                     /* add both nodes */
@@ -280,7 +261,7 @@ private:
                 }
             }
         }
-        std::cout << "done with func\n";
+        // std::cout << "done with func\n";
     }
 };
 

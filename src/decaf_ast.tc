@@ -154,9 +154,7 @@
 
 genFunc(method_declaration){
     CFGTuple t = block->AST2CFG();
-    t.second->setLabel("a");
-    std::cout << "a\n";
-    Func f = new FuncDef("test", t);
+    Func f = new FuncDef(name, t);
     return f;
 }
 
@@ -185,7 +183,7 @@ AST2CFG(println){
     nop->setLabel("nop");
     nop->setNop();
     n->setEdge(new SingleEdge(nop));
-    std::cout << "println\n";
+    //std::cout << "println\n";
     return std::make_pair(n, nop);
 }
 
@@ -203,7 +201,7 @@ AST2CFG(print){
     nop->setLabel("nop");
     nop->setNop();
     n->setEdge(new SingleEdge(nop));
-    std::cout << "print\n";
+    //std::cout << "print\n";
     return std::make_pair(n, nop);
 }
 
@@ -233,7 +231,17 @@ AST2CFG(field_assign){}
 AST2CFG(field_declaration){}
 AST2CFG(assign){}
 AST2CFG(while_stmt){}
-AST2CFG(empty_node){}
+AST2CFG(empty_node){
+    CFG::Node * nop = new CFG::Node();
+    nop->setLabel("nop");
+    nop->setNop();
+
+    CFG::Node * nop1 = new CFG::Node();
+    nop->setLabel("nop");
+    nop->setNop();
+
+    return std::make_pair(nop, nop1);
+}
 
 toString(intnum){
     return std::to_string(num);
