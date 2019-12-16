@@ -100,6 +100,7 @@ private:
             NodeKind kind = stmt->getKind();
             switch(kind){
                 HANDLE_NODE(IDOperand);
+                HANDLE_NODE(LValueOperand);
                 HANDLE_NODE(StringOperand);
                 HANDLE_NODE(IntOperand);
                 HANDLE_NODE(AddExpr);
@@ -117,6 +118,7 @@ private:
                 HANDLE_NODE(ParamStatement);
                 HANDLE_NODE(RetStatement);
                 HANDLE_NODE(NopStatement);
+                HANDLE_NODE(ExprStatement);
                 
                 default:
                     std::cout << "no visit for node\n";
@@ -154,6 +156,7 @@ private:
 
         std::string visit(CFG::IntOperand * node);
         std::string visit(IDOperand * node);
+        std::string visit(LValueOperand * node);
         std::string visit(StringOperand * node);
         std::string visit(AddExpr * node);
         std::string visit(SubExpr * node);
@@ -170,6 +173,7 @@ private:
         std::string visit(ParamStatement * stmt);
         std::string visit(RetStatement * stmt);
         std::string visit(NopStatement * stmt);
+        std::string visit(ExprStatement * stmt);
 
         std::string getJmp(Expr * expr){
             switch(expr->getKind()){

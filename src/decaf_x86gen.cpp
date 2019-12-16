@@ -28,10 +28,14 @@ std::string GenX86::Visitor::visit(IDOperand * node){
     }
 }
 
+std::string GenX86::Visitor::visit(CFG::LValueOperand * node){
+    return node->toString();
+}
+
 std::string GenX86::Visitor::visit(AddExpr * node){
     std::string ret;
 
-    ret = "move eax, " + visit(node->op1) + "\nadd eax, " + visit(node->op2) + "\n"; 
+    ret = "mov eax, " + visit(node->op1) + "\nadd eax, " + visit(node->op2) + "\n"; 
 
     return ret;
 }
@@ -39,7 +43,7 @@ std::string GenX86::Visitor::visit(AddExpr * node){
 std::string GenX86::Visitor::visit(SubExpr * node){
     std::string ret;
 
-    ret = "move eax, " + node->op1->toString() + "\nsub eax, " + node->op2->toString() + "\n"; 
+    ret = "mov eax, " + node->op1->toString() + "\nsub eax, " + node->op2->toString() + "\n"; 
 
     return ret;
 }
@@ -47,7 +51,7 @@ std::string GenX86::Visitor::visit(SubExpr * node){
 std::string GenX86::Visitor::visit(MultExpr * node){
     std::string ret;
 
-    ret = "move eax, " + node->op1->toString() + "\nmult eax, " + node->op2->toString() + "\n"; 
+    ret = "mov eax, " + node->op1->toString() + "\nmult eax, " + node->op2->toString() + "\n"; 
 
     return ret;
 }
@@ -55,7 +59,7 @@ std::string GenX86::Visitor::visit(MultExpr * node){
 std::string GenX86::Visitor::visit(DivExpr * node){
     std::string ret;
 
-    ret = "move eax, " + node->op1->toString() + "cdq\nmov ecx, " + node->op2->toString() + "\nidiv";
+    ret = "mov eax, " + node->op1->toString() + "cdq\nmov ecx, " + node->op2->toString() + "\nidiv";
 
     return ret;
 }
@@ -104,6 +108,14 @@ std::string GenX86::Visitor::visit(NequalExpr * node){
     std::string ret;
 
     ret = "mov eax, " + visit(node->op1) + "\ncmp eax, " + visit(node->op2) + "\nsetne bl\n";
+
+    return ret;
+}
+
+std::string GenX86::Visitor::visit(ExprStatement * node){
+    std::string ret;
+
+    ret = visit(node->expr);
 
     return ret;
 }

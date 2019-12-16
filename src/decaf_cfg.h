@@ -34,6 +34,7 @@ enum class NodeKind {
     Statement,
     IntOperand,
     IDOperand,
+    ExprStatement,
     AssignStatement,
     CallStatement,
     RetStatement,
@@ -308,6 +309,23 @@ class Statement : public Base {
 public:
     Statement(){}
     std::string toString(){}
+};
+
+class ExprStatement : public Statement{
+
+public:
+    ExprStatement(Expr * expr) : expr(expr) {}
+
+    std::string toString() {
+        return expr->toString();
+    }
+
+    NodeKind getKind(){
+        return NodeKind::ExprStatement;
+    }
+
+    Expr * expr;
+
 };
 
 class AssignStatement : public Statement {
