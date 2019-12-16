@@ -75,6 +75,7 @@ program : KW_CLASS IDENT '{' program_block '}' { std::cout << "Parsed successful
 ;
 
 program_block : program_block method_decl { $1.push_back($2); $$ = $1; }
+              | program_block field_decl {  }
               | %empty { $$.push_back(nodes.empty_nodeCreate()); }
 ;
 
@@ -133,13 +134,14 @@ expr : expr '+' expr { $$ = nodes.plusCreate($1, $3);  }
      | expr '/' expr { $$ = nodes.divideCreate($1, $3); }
      | expr '<' expr { $$ = nodes.lessCreate($1, $3); }
      | expr '>' expr { $$ = nodes.greaterCreate($1, $3); }
+     | expr '%' expr { $$ = nodes.modCreate($1, $3); }
      | expr LTE expr { $$ = nodes.lteCreate($1, $3); }
      | expr GTE expr { $$ = nodes.gteCreate($1, $3); }
      | expr EQUAL expr { $$ = nodes.equalCreate($1, $3); }
      | expr NEQUAL expr { $$ = nodes.nequalCreate($1, $3); }
      | '(' expr ')' { $$ = $2; }
      | NUMBER { $$ = nodes.intnumCreate($1);}
-     | IDENT { $$ = nodes.idCreate($1); }
+     | IDENT { $$ = nodes.idCreate($1) ;std::cout << "id op\n"; }
      | STRING { $$ = nodes.strCreate($1); }
 ;
 

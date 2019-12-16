@@ -11,6 +11,7 @@ constexpr char addop[] = "+";
 constexpr char subop[] = "-";
 constexpr char multop[] = "*";
 constexpr char divop[] = "/";
+constexpr char modop[] = "%";
 constexpr char greaterop[] = ">";
 constexpr char lessop[] = "<";
 constexpr char gteop[] = ">=";
@@ -25,6 +26,7 @@ enum class NodeKind {
     SubExpr,
     MultExpr,
     DivExpr,
+    ModExpr,
     GreaterExpr,
     LessExpr,
     GTEExpr,
@@ -217,6 +219,20 @@ public:
 
     NodeKind getKind(){
         return NodeKind::DivExpr;
+    }
+};
+
+class ModExpr : public BinaryExpr<modop, NodeKind::DivExpr> {
+
+public:
+    ModExpr(Operand * op1, Operand * op2) : BinaryExpr(op1, op2) {}
+
+    std::string toString() {
+        return op1->toString() + divop + op2->toString();
+    }
+
+    NodeKind getKind(){
+        return NodeKind::ModExpr;
     }
 };
 

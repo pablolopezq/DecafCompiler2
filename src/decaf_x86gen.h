@@ -32,7 +32,7 @@ public:
             out << f->getName() << ":\n";
 
             out << "push ebp\nmov ebp, esp\n" <<
-                    "add esp, " << 4 << "\n";
+                    "sub esp, " << 12 << "\n";
 
             /* generar codigo de f */
             gen_asm(*f, table); 
@@ -45,7 +45,12 @@ public:
             
         out <<"section .data\n";
         for (auto& str: lits) {
-            out << str.second << ": db \'" << str.first << "\', 10, 0\n";
+            if(str.first.find("\\n") != std::string::npos){
+                std::string s = str.first.substr(0, str.first.size()-2);
+                out << str.second << ": db \'" << s << "\', 10, 0\n";
+            }
+            else
+                out << str.second << ": db \'" << str.first << "\', 0\n";
         }
     }
 
@@ -108,6 +113,7 @@ private:
                 HANDLE_NODE(SubExpr);
                 HANDLE_NODE(MultExpr);
                 HANDLE_NODE(DivExpr);
+                HANDLE_NODE(ModExpr);
                 HANDLE_NODE(GreaterExpr);
                 HANDLE_NODE(LessExpr);
                 HANDLE_NODE(GTEExpr);
@@ -156,7 +162,7 @@ private:
             }
         }
 
-        std::string visit(CFG::IntOperand * node);
+        std::string visit(IntOperand * node);
         std::string visit(IDOperand * node);
         std::string visit(LValueOperand * node);
         std::string visit(StringOperand * node);
@@ -165,6 +171,7 @@ private:
         std::string visit(SubExpr * node);
         std::string visit(MultExpr * node);
         std::string visit(DivExpr * node);
+        std::string visit(ModExpr * node);
         std::string visit(GreaterExpr * stmt);
         std::string visit(LessExpr * stmt);
         std::string visit(GTEExpr * stmt);

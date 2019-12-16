@@ -48,6 +48,7 @@
     minus_type,
     mul_type,
     div_type,
+    mod_type,
     greater_type,
     less_type,
     gte_type,
@@ -98,6 +99,7 @@
 %node minus binary
 %node multiply binary
 %node divide binary
+%node mod binary
 %node less binary
 %node greater binary
 %node lte binary
@@ -175,6 +177,7 @@ infer_bintype(plus){ bt = plus_type; }
 infer_bintype(minus){ bt = minus_type; }
 infer_bintype(multiply){ bt = mul_type; }
 infer_bintype(divide){ bt = div_type; }
+infer_bintype(mod){ bt = mod_type; }
 infer_bintype(greater){ bt = greater_type; }
 infer_bintype(less){ bt = less_type; }
 infer_bintype(gte){ bt = gte_type; }
@@ -192,6 +195,9 @@ isUnary(multiply){
     return false;
 }
 isUnary(divide){
+    return false;
+}
+isUnary(mod){
     return false;
 }
 isUnary(greater){
@@ -249,14 +255,17 @@ AST2CFG(println){
         CFG::Operand * op = u->OP2CFG();
         if(op->getKind() == NodeKind::IntOperand || op->getKind() == NodeKind::IDOperand){
             CFG::ParamStatement * par = new CFG::ParamStatement(op);
-            CFG::StringOperand * s = new CFG::StringOperand("a%da");
+            CFG::StringOperand * s = new CFG::StringOperand("a%d\\na");
             CFG::ParamStatement * par1 = new CFG::ParamStatement(s);
             n->addStatement(par);
             n->addStatement(par1);
         }
         else{
+            CFG::StringOperand * s = new CFG::StringOperand("a%s\\na");
+            CFG::ParamStatement * par1 = new CFG::ParamStatement(s);
             CFG::ParamStatement * par = new CFG::ParamStatement(op);
             n->addStatement(par);
+            n->addStatement(par1);
         }
     }
     else{
@@ -278,11 +287,12 @@ AST2CFG(println){
             case lte_type: ex = new CFG::LTEExpr(op1,op2); break;
             case equal_type: ex = new CFG::EqualExpr(op1,op2); break;
             case nequal_type: ex = new CFG::NequalExpr(op1,op2); break;
+            case mod_type: ex = new CFG::ModExpr(op1,op2); break;
         }
         CFG::ExprStatement * e = new CFG::ExprStatement(ex);
         CFG::LValueOperand * reg = new CFG::LValueOperand("eax");
         CFG::ParamStatement * par = new CFG::ParamStatement(reg);
-        CFG::StringOperand * s = new CFG::StringOperand("a%da");
+        CFG::StringOperand * s = new CFG::StringOperand("a%d\\na");
         CFG::ParamStatement * par1 = new CFG::ParamStatement(s);
         n->addStatement(e);
         n->addStatement(par);
@@ -307,7 +317,7 @@ AST2CFG(print){
     if(expr->isUnary()){
         unary * u = static_cast<unary*>(expr);
         CFG::Operand * op = u->OP2CFG();
-        if(op->getKind() == NodeKind::IntOperand){
+        if(op->getKind() == NodeKind::IntOperand || op->getKind() == NodeKind::IDOperand){
             CFG::ParamStatement * par = new CFG::ParamStatement(op);
             CFG::StringOperand * s = new CFG::StringOperand("a%da");
             CFG::ParamStatement * par1 = new CFG::ParamStatement(s);
@@ -338,6 +348,8 @@ AST2CFG(print){
             case lte_type: ex = new CFG::LTEExpr(op1,op2); break;
             case equal_type: ex = new CFG::EqualExpr(op1,op2); break;
             case nequal_type: ex = new CFG::NequalExpr(op1,op2); break;
+            case mod_type: ex = new CFG::ModExpr(op1,op2); break;
+
         }
         CFG::ExprStatement * e = new CFG::ExprStatement(ex);
         CFG::LValueOperand * reg = new CFG::LValueOperand("eax");
@@ -436,6 +448,20 @@ EXPR2CFG(divide){
     }
     CFG::DivExpr * div = new CFG::DivExpr(op1, op2);
     return div;
+}
+EXPR2CFG(mod){
+    CFG::Operand * op1;
+    CFG::Operand * op2;
+    if(expr1->isUnary()){
+        unary * u1 = static_cast<unary*>(expr1);
+        op1 = u1->OP2CFG();
+    }
+    if(expr2->isUnary()){
+        unary * u2 = static_cast<unary*>(expr2);
+        op2 = u2->OP2CFG();
+    }
+    CFG::ModExpr * mop = new CFG::ModExpr(op1, op2);
+    return mop;
 }
 EXPR2CFG(greater){
     CFG::Operand * op1;
@@ -553,6 +579,7 @@ AST2CFG(assign){
             case lte_type: ex = new CFG::LTEExpr(op1,op2); break;
             case equal_type: ex = new CFG::EqualExpr(op1,op2); break;
             case nequal_type: ex = new CFG::NequalExpr(op1,op2); break;
+            case mod_type: ex = new CFG::ModExpr(op1,op2); break;
         }        
         CFG::ExprStatement * e = new CFG::ExprStatement(ex);
         CFG::LValueOperand * l = new CFG::LValueOperand("eax");
@@ -615,6 +642,9 @@ toString(multiply){
 }
 toString(divide){
     return expr1->toString() + "/" + expr2->toString();
+}
+toString(mod){
+    return expr1->toString() + "%" + expr2->toString();
 }
 toString(less){
     return expr1->toString() + "<" + expr2->toString();
@@ -885,3 +915,5 @@ exec(field_assign){}
 exec(field_declaration){}
 infer_type(bool_expr) {}
 exec(param_declaration){}
+exec(mod){}
+infer_type(mod){}
