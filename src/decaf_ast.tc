@@ -6,63 +6,100 @@
     #include <cstddef> //for size_t
     #include <cmath>
     #include <unordered_map>
-    using string_t = std::string;
-    using map_t = std::unordered_map<std::string, int>;
-    
+    #include <vector>
+    #include <utility>
 
+    #include "funcdef.h"
+    #include "decaf_cfg.h"
+
+    class statement;
+
+    using CFGTuple = std::pair<CFG::Node*, CFG::Node*>;
+    using CFGExpr = CFG::Expr*;
+    using CFGOP = CFG::Operand*;
+
+    using string_t = std::string;
+    using string_v = std::vector<std::string>;
+    using map_t = std::unordered_map<std::string, int>;
+    using paramv_t = std::vector<statement*>;
+    using Func = FuncDef*;
 %}
 
 %{
-    #include "ast.h"
+    #include "decaf_ast.h"
     #include <iostream>
     #include <stdio.h>
     void yyerror(const char *msg);
-    
+
+    int label_counter = 0;
+    int var_counter = 0;
 %}
 
 %enum type_code = 
 {
     int_type,
-    string_type
+    string_type,
+    bool_type,
+    void_type
+}
+
+%enum bin_type = {
+    plus_type,
+    minus_type,
+    mul_type,
+    div_type,
+    mod_type,
+    greater_type,
+    less_type,
+    gte_type,
+    lte_type,
+    equal_type,
+    nequal_type,
 }
 
 %node ASTNode %abstract %typedef = 
 {
     %nocreate int value = { 0 };
     %nocreate string_t str_val = { "" };
-    %nocreate type_code type = {int_type};  
-
+    %nocreate type_code type = {int_type};
 }
 
-%node expression ASTNode %abstract =
-{
-}
+%node expression ASTNode %abstract = {}
 
 %node binary expression %abstract = 
 {
-    ASTNode *expr1;
-    ASTNode *expr2;
+    expression *expr1;
+    expression *expr2;
+    %nocreate bin_type bt = {plus_type};
 }
 
-%node intnum expression = 
+%node unary expression %abstract = {}
+
+%node intnum unary = 
 {
     int num;
 }
 
-%node str expression =
+%node str unary =
 {
     string_t val;
 }
 
-%node id expression =
+%node id unary =
 {
     string_t id_val;
+}
+
+%node bool_expr unary =
+{
+    bool b_val;
 }
 
 %node plus binary
 %node minus binary
 %node multiply binary
 %node divide binary
+%node mod binary
 %node less binary
 %node greater binary
 %node lte binary
@@ -72,35 +109,870 @@
 
 %node statement ASTNode %abstract
 
-%node stmt_block ASTNode = {
-    ASTNode * first;
-    ASTNode * next;
+%node stmt_block statement = {
+    statement * first;
+    statement * next;
 }
 
 %node ifStmt statement = {
-    ASTNode * condition;
-    ASTNode * then_s;
-    ASTNode * else_s;
+    expression * condition;
+    statement * then_s;
+    statement * else_s;
+}
+
+%node method_declaration statement = {
+    type_code t;
+    string_t name;
+    paramv_t params;
+    statement * block;
+}
+
+%node param_declaration statement = {
+    type_code t;
+    string_t name;
+}
+
+%node field_declaration statement = {
+    type_code t;
+    string_v names;
+}
+
+%node field_assign statement = {
+    type_code t;
+    string_t name;
+    expression * expr;
 }
 
 %node assign statement = {
     string_t id;
-    ASTNode * expression;
+    expression * expr;
 }
 
 %node while_stmt statement = {
-    ASTNode * condition;
-    ASTNode * stmt;
+    expression * condition;
+    statement * stmt;
+}
+
+%node println statement = {
+    expression * expr;
 }
 
 %node print statement = {
-    ASTNode * expr;
+    expression * expr;
+}
+
+%node for_stmt statement = {
+    statement * fassign;
+    expression * condition;
+    statement * sassign;
+    statement * block;
 }
 
 %node empty_node statement
 
-%operation %virtual void exec(ASTNode *this, map_t & vars)
-%operation %virtual void infer_type(ASTNode * this)
+%operation %virtual void infer_type(expression * this)
+%operation %virtual void infer_bintype(binary * this)
+%operation %virtual string_t toString(ASTNode * this)
+%operation %virtual CFGTuple AST2CFG(statement * this)
+%operation %virtual CFGExpr EXPR2CFG(binary * this)
+%operation %virtual CFGOP OP2CFG(unary * this)
+%operation %virtual Func genFunc(method_declaration * this)
+%operation %virtual bool isUnary(expression * this)
+%operation %virtual bool isCond(binary * this)
+
+infer_bintype(plus){ bt = plus_type; }
+infer_bintype(minus){ bt = minus_type; }
+infer_bintype(multiply){ bt = mul_type; }
+infer_bintype(divide){ bt = div_type; }
+infer_bintype(mod){ bt = mod_type; }
+infer_bintype(greater){ bt = greater_type; }
+infer_bintype(less){ bt = less_type; }
+infer_bintype(gte){ bt = gte_type; }
+infer_bintype(lte){ bt = lte_type; }
+infer_bintype(equal){ bt = equal_type; }
+infer_bintype(nequal){ bt = nequal_type; }
+
+isCond(plus){ return false; }
+isCond(minus){ return false; }
+isCond(multiply){ return false; }
+isCond(divide){ return false; }
+isCond(mod){ return false; }
+isCond(greater){ return true; }
+isCond(less){ return true; }
+isCond(gte){ return true; }
+isCond(lte){ return true; }
+isCond(equal){ return true; }
+isCond(nequal){ return true; }
+
+isUnary(plus){
+    return false;
+}
+isUnary(minus){
+    return false;
+}
+isUnary(multiply){
+    return false;
+}
+isUnary(divide){
+    return false;
+}
+isUnary(mod){
+    return false;
+}
+isUnary(greater){
+    return false;
+}
+isUnary(less){
+    return false;
+}
+isUnary(gte){
+    return false;
+}
+isUnary(lte){
+    return false;
+}
+isUnary(equal){
+    return false;
+}
+isUnary(nequal){
+    return false;
+}
+isUnary(intnum){
+    return true;
+}
+isUnary(str){
+    return true;
+}
+isUnary(id){
+    return true;
+}
+isUnary(bool_expr){
+    return true;
+}
+
+genFunc(method_declaration){
+    CFGTuple t = block->AST2CFG();
+    CFG::RetStatement * ret = new CFG::RetStatement();
+    t.second->addStatement(ret);
+    Func f = new FuncDef(name, t);
+    return f;
+}
+
+AST2CFG(stmt_block){
+    CFGTuple f = first->AST2CFG();
+    CFGTuple n = next->AST2CFG();
+
+    CFG::SingleEdge * se = new SingleEdge(n.first);
+    f.second->setEdge(se);
+    return std::make_pair(f.first, n.second);
+}
+
+AST2CFG(method_declaration){}
+
+AST2CFG(for_stmt){
+    CFG::Node * f_assign = new CFG::Node();
+    CFG::Node * s_assign = new CFG::Node();
+    CFG::Node * cond = new CFG::Node();
+    CFG::Node * nop = new CFG::Node();
+    nop->setNop();
+
+    binary * b = static_cast<binary*>(condition);
+    unary * u1 = static_cast<unary*>(b->expr1);
+    unary * u2 = static_cast<unary*>(b->expr2);
+    CFG::Operand * op1 = u1->OP2CFG();
+    CFG::Operand * op2 = u2->OP2CFG();
+    CFG::Expr * ex;
+    b->infer_bintype();
+    switch(b->bt){
+        case plus_type: ex = new CFG::AddExpr(op1,op2); break;
+        case minus_type: ex = new CFG::SubExpr(op1,op2); break;
+        case mul_type: ex = new CFG::MultExpr(op1,op2); break;
+        case div_type: ex = new CFG::DivExpr(op1,op2); break;
+        case greater_type: ex = new CFG::GreaterExpr(op1,op2); break;
+        case less_type: ex = new CFG::LessExpr(op1,op2); break;
+        case gte_type: ex = new CFG::GTEExpr(op1,op2); break;
+        case lte_type: ex = new CFG::LTEExpr(op1,op2); break;
+        case equal_type: ex = new CFG::EqualExpr(op1,op2); break;
+        case nequal_type: ex = new CFG::NequalExpr(op1,op2); break;
+        case mod_type: ex = new CFG::ModExpr(op1,op2); break;
+    }
+
+    CFG::ExprStatement * e = new CFG::ExprStatement(ex);
+
+    CFGTuple f_assign_t = fassign->AST2CFG();
+    CFGTuple s_assign_t = sassign->AST2CFG();
+    CFGTuple block_t = block->AST2CFG();
+
+    f_assign_t.second->setEdge(new DoubleEdge(block_t.first, nop, ex));
+    block_t.second->setEdge(new SingleEdge(s_assign_t.first));
+    s_assign_t.second->setEdge(new DoubleEdge(block_t.first, nop, ex));
+
+    cond->setLabel("LBL" + std::to_string(label_counter++));
+    f_assign_t.first->setLabel("LBL" + std::to_string(label_counter++));
+    s_assign_t.first->setLabel("LBL" + std::to_string(label_counter++));
+    nop->setLabel("LBL" + std::to_string(label_counter++));
+
+    return std::make_pair(f_assign_t.first, nop);
+}
+
+AST2CFG(println){
+    CFG::Node * n = new CFG::Node();
+    if(expr->isUnary()){
+        unary * u = static_cast<unary*>(expr);
+        CFG::Operand * op = u->OP2CFG();
+        if(op->getKind() == NodeKind::IntOperand || op->getKind() == NodeKind::IDOperand){
+            CFG::ParamStatement * par = new CFG::ParamStatement(op);
+            CFG::StringOperand * s = new CFG::StringOperand("a%d\\na");
+            CFG::ParamStatement * par1 = new CFG::ParamStatement(s);
+            n->addStatement(par);
+            n->addStatement(par1);
+        }
+        else{
+            CFG::StringOperand * s = new CFG::StringOperand("a%s\\na");
+            CFG::ParamStatement * par1 = new CFG::ParamStatement(s);
+            CFG::ParamStatement * par = new CFG::ParamStatement(op);
+            n->addStatement(par);
+            n->addStatement(par1);
+        }
+    }
+    else{
+        binary * b = static_cast<binary*>(expr);
+        unary * u1 = static_cast<unary*>(b->expr1);
+        unary * u2 = static_cast<unary*>(b->expr2);
+        CFG::Operand * op1 = u1->OP2CFG();
+        CFG::Operand * op2 = u2->OP2CFG();
+        CFG::Expr * ex;
+        b->infer_bintype();
+        switch(b->bt){
+            case plus_type: ex = new CFG::AddExpr(op1,op2); break;
+            case minus_type: ex = new CFG::SubExpr(op1,op2); break;
+            case mul_type: ex = new CFG::MultExpr(op1,op2); break;
+            case div_type: ex = new CFG::DivExpr(op1,op2); break;
+            case greater_type: ex = new CFG::GreaterExpr(op1,op2); break;
+            case less_type: ex = new CFG::LessExpr(op1,op2); break;
+            case gte_type: ex = new CFG::GTEExpr(op1,op2); break;
+            case lte_type: ex = new CFG::LTEExpr(op1,op2); break;
+            case equal_type: ex = new CFG::EqualExpr(op1,op2); break;
+            case nequal_type: ex = new CFG::NequalExpr(op1,op2); break;
+            case mod_type: ex = new CFG::ModExpr(op1,op2); break;
+        }
+        if(b->isCond()){
+            CFG::Node * expr_node = new CFG::Node();
+            std::string lbl = "LBL" + std::to_string(label_counter++);
+            expr_node->setLabel(lbl);
+            CFG::ExprStatement * e = new CFG::ExprStatement(ex);
+            expr_node->addStatement(e);
+
+            CFG::CallStatement * call = new CFG::CallStatement("printf", 1);
+
+            CFG::Node * p_true = new CFG::Node();
+            lbl = "LBL" + std::to_string(label_counter++);
+            p_true->setLabel(lbl);
+
+            CFG::StringOperand * op = new CFG::StringOperand("atruea");
+            CFG::StringOperand * s = new CFG::StringOperand("a%s\\na");
+            CFG::ParamStatement * par1 = new CFG::ParamStatement(s);
+            CFG::ParamStatement * par = new CFG::ParamStatement(op);
+            p_true->addStatement(par);
+            p_true->addStatement(par1);
+            p_true->addStatement(call);
+
+            CFG::Node * p_false = new CFG::Node();
+            lbl = "LBL" + std::to_string(label_counter++);
+            p_false->setLabel(lbl);
+            CFG::StringOperand * opf = new CFG::StringOperand("afalsea");
+            CFG::StringOperand * sf = new CFG::StringOperand("a%s\\na");
+            CFG::ParamStatement * par1f = new CFG::ParamStatement(sf);
+            CFG::ParamStatement * parf = new CFG::ParamStatement(opf);
+            p_false->addStatement(parf);
+            p_false->addStatement(par1f);
+            p_false->addStatement(call);
+
+            CFG::Node * nopc = new CFG::Node();
+            nopc->setLabel("LBL" + std::to_string(label_counter++));
+            nopc->setNop();
+
+            p_true->setEdge(new SingleEdge(nopc));
+            p_false->setEdge(new SingleEdge(nopc));
+
+            expr_node->setEdge(new DoubleEdge(p_true, p_false, ex));
+
+            return std::make_pair(expr_node, nopc);
+            
+        }
+        else{
+            CFG::ExprStatement * e = new CFG::ExprStatement(ex);
+            CFG::LValueOperand * reg = new CFG::LValueOperand("eax");
+            CFG::ParamStatement * par = new CFG::ParamStatement(reg);
+            CFG::StringOperand * s = new CFG::StringOperand("a%d\\na");
+            CFG::ParamStatement * par1 = new CFG::ParamStatement(s);
+            n->addStatement(e);
+            n->addStatement(par);
+            n->addStatement(par1);
+        }
+    }
+
+    CFG::CallStatement * call = new CFG::CallStatement("printf", 1);
+
+    std::string lbl = "LBL" + std::to_string(label_counter++);
+    n->setLabel(lbl);
+    n->addStatement(call);
+    CFG::Node * nop = new CFG::Node();
+    nop->setLabel("LBL" + std::to_string(label_counter++));
+    nop->setNop();
+    n->setEdge(new SingleEdge(nop));
+    return std::make_pair(n, nop);
+}
+
+AST2CFG(print){
+    CFG::Node * n = new CFG::Node();
+    if(expr->isUnary()){
+        unary * u = static_cast<unary*>(expr);
+        CFG::Operand * op = u->OP2CFG();
+        if(op->getKind() == NodeKind::IntOperand || op->getKind() == NodeKind::IDOperand){
+            CFG::ParamStatement * par = new CFG::ParamStatement(op);
+            CFG::StringOperand * s = new CFG::StringOperand("a%da");
+            CFG::ParamStatement * par1 = new CFG::ParamStatement(s);
+            n->addStatement(par);
+            n->addStatement(par1);
+        }
+        else{
+            CFG::ParamStatement * par = new CFG::ParamStatement(op);
+            n->addStatement(par);
+        }
+    }
+    else{
+        binary * b = static_cast<binary*>(expr);
+        unary * u1 = static_cast<unary*>(b->expr1);
+        unary * u2 = static_cast<unary*>(b->expr2);
+        CFG::Operand * op1 = u1->OP2CFG();
+        CFG::Operand * op2 = u2->OP2CFG();
+        CFG::Expr * ex;
+        b->infer_bintype();
+        switch(b->bt){
+            case plus_type: ex = new CFG::AddExpr(op1,op2); break;
+            case minus_type: ex = new CFG::SubExpr(op1,op2); break;
+            case mul_type: ex = new CFG::MultExpr(op1,op2); break;
+            case div_type: ex = new CFG::DivExpr(op1,op2); break;
+            case greater_type: ex = new CFG::GreaterExpr(op1,op2); break;
+            case less_type: ex = new CFG::LessExpr(op1,op2); break;
+            case gte_type: ex = new CFG::GTEExpr(op1,op2); break;
+            case lte_type: ex = new CFG::LTEExpr(op1,op2); break;
+            case equal_type: ex = new CFG::EqualExpr(op1,op2); break;
+            case nequal_type: ex = new CFG::NequalExpr(op1,op2); break;
+            case mod_type: ex = new CFG::ModExpr(op1,op2); break;
+
+        }
+        if(b->isCond()){
+            CFG::Node * expr_node = new CFG::Node();
+            std::string lbl = "LBL" + std::to_string(label_counter++);
+            expr_node->setLabel(lbl);
+            CFG::ExprStatement * e = new CFG::ExprStatement(ex);
+            expr_node->addStatement(e);
+
+            CFG::CallStatement * call = new CFG::CallStatement("printf", 1);
+
+            CFG::Node * p_true = new CFG::Node();
+            lbl = "LBL" + std::to_string(label_counter++);
+            p_true->setLabel(lbl);
+
+            CFG::StringOperand * op = new CFG::StringOperand("atruea");
+            CFG::StringOperand * s = new CFG::StringOperand("a%s\\na");
+            CFG::ParamStatement * par1 = new CFG::ParamStatement(s);
+            CFG::ParamStatement * par = new CFG::ParamStatement(op);
+            p_true->addStatement(par);
+            p_true->addStatement(par1);
+            p_true->addStatement(call);
+
+            CFG::Node * p_false = new CFG::Node();
+            lbl = "LBL" + std::to_string(label_counter++);
+            p_false->setLabel(lbl);
+            CFG::StringOperand * opf = new CFG::StringOperand("afalsea");
+            CFG::StringOperand * sf = new CFG::StringOperand("a%s\\na");
+            CFG::ParamStatement * par1f = new CFG::ParamStatement(sf);
+            CFG::ParamStatement * parf = new CFG::ParamStatement(opf);
+            p_false->addStatement(parf);
+            p_false->addStatement(par1f);
+            p_false->addStatement(call);
+
+            CFG::Node * nopc = new CFG::Node();
+            nopc->setLabel("LBL" + std::to_string(label_counter++));
+            nopc->setNop();
+
+            p_true->setEdge(new SingleEdge(nopc));
+            p_false->setEdge(new SingleEdge(nopc));
+
+            expr_node->setEdge(new DoubleEdge(p_true, p_false, ex));
+
+            return std::make_pair(expr_node, nopc);
+            
+        }
+        else{
+            CFG::ExprStatement * e = new CFG::ExprStatement(ex);
+            CFG::LValueOperand * reg = new CFG::LValueOperand("eax");
+            CFG::ParamStatement * par = new CFG::ParamStatement(reg);
+            CFG::StringOperand * s = new CFG::StringOperand("a%d\\na");
+            CFG::ParamStatement * par1 = new CFG::ParamStatement(s);
+            n->addStatement(e);
+            n->addStatement(par);
+            n->addStatement(par1);
+        }
+    }
+
+    CFG::CallStatement * call = new CFG::CallStatement("printf", 1);
+
+    std::string lbl = "LBL" + std::to_string(label_counter++);
+    n->setLabel(lbl);
+    n->addStatement(call);
+    CFG::Node * nop = new CFG::Node();
+    nop->setLabel("LBL" + std::to_string(label_counter++));
+    nop->setNop();
+    n->setEdge(new SingleEdge(nop));
+    //std::cout << "println\n";
+    return std::make_pair(n, nop);
+}
+
+OP2CFG(intnum){
+    CFG::IntOperand * ret = new CFG::IntOperand(num);
+    return ret;
+}
+
+OP2CFG(str){
+    CFG::StringOperand * ret = new CFG::StringOperand(val);
+    return ret;
+}
+
+OP2CFG(id){
+    CFG::IDOperand * ret = new CFG::IDOperand(id_val);
+    return ret;
+}
+OP2CFG(bool_expr){
+    CFG::BoolOperand * ret = new CFG::BoolOperand(b_val);
+    return ret;
+}
+
+EXPR2CFG(plus){
+    CFG::Operand * op1;
+    CFG::Operand * op2;
+    if(expr1->isUnary()){
+        unary * u1 = static_cast<unary*>(expr1);
+        op1 = u1->OP2CFG();
+    }
+    if(expr2->isUnary()){
+        unary * u2 = static_cast<unary*>(expr2);
+        op2 = u2->OP2CFG();
+    }
+    CFG::AddExpr * add = new CFG::AddExpr(op1, op2);
+    return add;
+}
+EXPR2CFG(minus){
+    CFG::Operand * op1;
+    CFG::Operand * op2;
+    if(expr1->isUnary()){
+        unary * u1 = static_cast<unary*>(expr1);
+        op1 = u1->OP2CFG();
+    }
+    if(expr2->isUnary()){
+        unary * u2 = static_cast<unary*>(expr2);
+        op2 = u2->OP2CFG();
+    }
+    CFG::SubExpr * sub = new CFG::SubExpr(op1, op2);
+    return sub;
+}
+EXPR2CFG(multiply){
+    CFG::Operand * op1;
+    CFG::Operand * op2;
+    if(expr1->isUnary()){
+        unary * u1 = static_cast<unary*>(expr1);
+        op1 = u1->OP2CFG();
+    }
+    if(expr2->isUnary()){
+        unary * u2 = static_cast<unary*>(expr2);
+        op2 = u2->OP2CFG();
+    }
+    CFG::MultExpr * mul = new CFG::MultExpr(op1, op2);
+    return mul;
+}
+EXPR2CFG(divide){
+    CFG::Operand * op1;
+    CFG::Operand * op2;
+    if(expr1->isUnary()){
+        unary * u1 = static_cast<unary*>(expr1);
+        op1 = u1->OP2CFG();
+    }
+    if(expr2->isUnary()){
+        unary * u2 = static_cast<unary*>(expr2);
+        op2 = u2->OP2CFG();
+    }
+    CFG::DivExpr * div = new CFG::DivExpr(op1, op2);
+    return div;
+}
+EXPR2CFG(mod){
+    CFG::Operand * op1;
+    CFG::Operand * op2;
+    if(expr1->isUnary()){
+        unary * u1 = static_cast<unary*>(expr1);
+        op1 = u1->OP2CFG();
+    }
+    if(expr2->isUnary()){
+        unary * u2 = static_cast<unary*>(expr2);
+        op2 = u2->OP2CFG();
+    }
+    CFG::ModExpr * mop = new CFG::ModExpr(op1, op2);
+    return mop;
+}
+EXPR2CFG(greater){
+    CFG::Operand * op1;
+    CFG::Operand * op2;
+    if(expr1->isUnary()){
+        unary * u1 = static_cast<unary*>(expr1);
+        op1 = u1->OP2CFG();
+    }
+    if(expr2->isUnary()){
+        unary * u2 = static_cast<unary*>(expr2);
+        op2 = u2->OP2CFG();
+    }
+    CFG::GreaterExpr * g = new CFG::GreaterExpr(op1, op2);
+    return g;
+}
+EXPR2CFG(less){
+    CFG::Operand * op1;
+    CFG::Operand * op2;
+    if(expr1->isUnary()){
+        unary * u1 = static_cast<unary*>(expr1);
+        op1 = u1->OP2CFG();
+    }
+    if(expr2->isUnary()){
+        unary * u2 = static_cast<unary*>(expr2);
+        op2 = u2->OP2CFG();
+    }
+    CFG::LessExpr * less = new CFG::LessExpr(op1, op2);
+    return less;
+}
+EXPR2CFG(gte){
+    CFG::Operand * op1;
+    CFG::Operand * op2;
+    if(expr1->isUnary()){
+        unary * u1 = static_cast<unary*>(expr1);
+        op1 = u1->OP2CFG();
+    }
+    if(expr2->isUnary()){
+        unary * u2 = static_cast<unary*>(expr2);
+        op2 = u2->OP2CFG();
+    }
+    CFG::GTEExpr * gte = new CFG::GTEExpr(op1, op2);
+    return gte;
+}
+EXPR2CFG(lte){
+    CFG::Operand * op1;
+    CFG::Operand * op2;
+    if(expr1->isUnary()){
+        unary * u1 = static_cast<unary*>(expr1);
+        op1 = u1->OP2CFG();
+    }
+    if(expr2->isUnary()){
+        unary * u2 = static_cast<unary*>(expr2);
+        op2 = u2->OP2CFG();
+    }
+    CFG::LTEExpr * lte = new CFG::LTEExpr(op1, op2);
+    return lte;
+}
+EXPR2CFG(equal){
+    CFG::Operand * op1;
+    CFG::Operand * op2;
+    if(expr1->isUnary()){
+        unary * u1 = static_cast<unary*>(expr1);
+        op1 = u1->OP2CFG();
+    }
+    if(expr2->isUnary()){
+        unary * u2 = static_cast<unary*>(expr2);
+        op2 = u2->OP2CFG();
+    }
+    CFG::EqualExpr * equal = new CFG::EqualExpr(op1, op2);
+    return equal;
+}
+EXPR2CFG(nequal){
+    CFG::Operand * op1;
+    CFG::Operand * op2;
+    if(expr1->isUnary()){
+        unary * u1 = static_cast<unary*>(expr1);
+        op1 = u1->OP2CFG();
+    }
+    if(expr2->isUnary()){
+        unary * u2 = static_cast<unary*>(expr2);
+        op2 = u2->OP2CFG();
+    }
+    CFG::NequalExpr * nequal = new CFG::NequalExpr(op1, op2);
+    return nequal;
+}
+
+AST2CFG(assign){
+    CFG::Node * n = new CFG::Node();
+    CFG::AssignStatement * assign;
+    CFG::Expr * ex;
+    CFG::IDOperand * idop = new CFG::IDOperand(id);
+    if(expr->isUnary()){
+        unary * u = static_cast<unary*>(expr);
+        CFG::Operand * op = u->OP2CFG();
+        ex = new CFG::UnaryExpr(op);
+        assign = new CFG::AssignStatement(idop, ex);
+        n->addStatement(assign);
+    }
+    else{
+        binary * b = static_cast<binary*>(expr);
+        unary * u1 = static_cast<unary*>(b->expr1);
+        unary * u2 = static_cast<unary*>(b->expr2);
+        CFG::Operand * op1 = u1->OP2CFG();
+        CFG::Operand * op2 = u2->OP2CFG();
+        CFG::Expr * ex;
+        b->infer_bintype();
+        switch(b->bt){
+            case plus_type: ex = new CFG::AddExpr(op1,op2); break;
+            case minus_type: ex = new CFG::SubExpr(op1,op2); break;
+            case mul_type: ex = new CFG::MultExpr(op1,op2); break;
+            case div_type: ex = new CFG::DivExpr(op1,op2); break;
+            case greater_type: ex = new CFG::GreaterExpr(op1,op2); break;
+            case less_type: ex = new CFG::LessExpr(op1,op2); break;
+            case gte_type: ex = new CFG::GTEExpr(op1,op2); break;
+            case lte_type: ex = new CFG::LTEExpr(op1,op2); break;
+            case equal_type: ex = new CFG::EqualExpr(op1,op2); break;
+            case nequal_type: ex = new CFG::NequalExpr(op1,op2); break;
+            case mod_type: ex = new CFG::ModExpr(op1,op2); break;
+        }        
+        CFG::ExprStatement * e = new CFG::ExprStatement(ex);
+        CFG::LValueOperand * l = new CFG::LValueOperand("eax");
+        CFG::UnaryExpr * un = new CFG::UnaryExpr(l);
+        assign = new CFG::AssignStatement(idop, un);
+        n->addStatement(e);
+        n->addStatement(assign);
+    }
+    std::string lbl = "LBL" + std::to_string(label_counter++);
+    n->setLabel(lbl);
+
+    CFG::Node * nop = new CFG::Node();
+    nop->setLabel("LBL" + std::to_string(label_counter++));
+    nop->setNop();
+    n->setEdge(new SingleEdge(nop));    
+
+    return std::make_pair(n, nop);
+}
+AST2CFG(empty_node){
+    CFG::Node * nop = new CFG::Node();
+    nop->setLabel("LBL" + std::to_string(label_counter++));
+    nop->setNop();
+
+    CFG::Node * nop1 = new CFG::Node();
+    nop1->setLabel("LBL" + std::to_string(label_counter++));
+    nop1->setNop();
+
+    nop->setEdge(new SingleEdge(nop1));
+
+    return std::make_pair(nop, nop1);
+}
+AST2CFG(ifStmt){
+    CFG::Node * cond = new CFG::Node();
+    CFG::Node * t_block = new CFG::Node();
+    CFG::Node * f_block = new CFG::Node();
+    CFG::Node * nop = new CFG::Node();
+    nop->setNop();
+    binary * b = static_cast<binary*>(condition);
+    unary * u1 = static_cast<unary*>(b->expr1);
+    unary * u2 = static_cast<unary*>(b->expr2);
+    CFG::Operand * op1 = u1->OP2CFG();
+    CFG::Operand * op2 = u2->OP2CFG();
+    CFG::Expr * ex;
+    b->infer_bintype();
+    switch(b->bt){
+        case plus_type: ex = new CFG::AddExpr(op1,op2); break;
+        case minus_type: ex = new CFG::SubExpr(op1,op2); break;
+        case mul_type: ex = new CFG::MultExpr(op1,op2); break;
+        case div_type: ex = new CFG::DivExpr(op1,op2); break;
+        case greater_type: ex = new CFG::GreaterExpr(op1,op2); break;
+        case less_type: ex = new CFG::LessExpr(op1,op2); break;
+        case gte_type: ex = new CFG::GTEExpr(op1,op2); break;
+        case lte_type: ex = new CFG::LTEExpr(op1,op2); break;
+        case equal_type: ex = new CFG::EqualExpr(op1,op2); break;
+        case nequal_type: ex = new CFG::NequalExpr(op1,op2); break;
+        case mod_type: ex = new CFG::ModExpr(op1,op2); break;
+    }        
+    CFG::ExprStatement * e = new CFG::ExprStatement(ex);
+    cond->addStatement(e);
+
+    CFGTuple t_tuple = then_s->AST2CFG();
+    CFGTuple f_tuple = else_s->AST2CFG();
+
+    t_tuple.second->setEdge(new SingleEdge(nop));
+    f_tuple.second->setEdge(new SingleEdge(nop));
+    cond->setEdge(new DoubleEdge(t_tuple.first, f_tuple.first, ex));
+
+    cond->setLabel("LBL" + std::to_string(label_counter++));
+    t_tuple.first->setLabel("LBL" + std::to_string(label_counter++));
+    f_tuple.first->setLabel("LBL" + std::to_string(label_counter++));
+    nop->setLabel("LBL" + std::to_string(label_counter++));
+
+    return std::make_pair(cond, nop);
+}
+
+AST2CFG(while_stmt){
+    CFG::Node * cond = new CFG::Node();
+    CFG::Node * nop = new CFG::Node();
+    nop->setNop();
+    binary * b = static_cast<binary*>(condition);
+    unary * u1 = static_cast<unary*>(b->expr1);
+    unary * u2 = static_cast<unary*>(b->expr2);
+    CFG::Operand * op1 = u1->OP2CFG();
+    CFG::Operand * op2 = u2->OP2CFG();
+    CFG::Expr * ex;
+    b->infer_bintype();
+    switch(b->bt){
+        case plus_type: ex = new CFG::AddExpr(op1,op2); break;
+        case minus_type: ex = new CFG::SubExpr(op1,op2); break;
+        case mul_type: ex = new CFG::MultExpr(op1,op2); break;
+        case div_type: ex = new CFG::DivExpr(op1,op2); break;
+        case greater_type: ex = new CFG::GreaterExpr(op1,op2); break;
+        case less_type: ex = new CFG::LessExpr(op1,op2); break;
+        case gte_type: ex = new CFG::GTEExpr(op1,op2); break;
+        case lte_type: ex = new CFG::LTEExpr(op1,op2); break;
+        case equal_type: ex = new CFG::EqualExpr(op1,op2); break;
+        case nequal_type: ex = new CFG::NequalExpr(op1,op2); break;
+        case mod_type: ex = new CFG::ModExpr(op1,op2); break;
+    }        
+    CFG::ExprStatement * e = new CFG::ExprStatement(ex);
+    cond->addStatement(e);
+
+    CFGTuple t_tuple = stmt->AST2CFG();
+
+    cond->setEdge(new DoubleEdge(t_tuple.first, nop, ex));
+    t_tuple.second->setEdge(new SingleEdge(cond));
+
+    cond->setLabel("LBL" + std::to_string(label_counter++));
+    t_tuple.first->setLabel("LBL" + std::to_string(label_counter++));
+    nop->setLabel("LBL" + std::to_string(label_counter++));
+
+    return std::make_pair(cond, nop);
+}
+
+AST2CFG(param_declaration){}
+AST2CFG(field_assign){}
+AST2CFG(field_declaration){}
+
+toString(intnum){
+    return std::to_string(num);
+}
+
+toString(str){
+    return val;
+}
+
+toString(id){
+    return id_val;
+}
+
+toString(bool_expr){
+    return b_val ? "1" : "0";
+}
+
+toString(plus){
+    return expr1->toString() + "+" + expr2->toString();
+}
+toString(minus){
+    return expr1->toString() + "-" + expr2->toString();
+}
+toString(multiply){
+    return expr1->toString() + "*" + expr2->toString();
+}
+toString(divide){
+    return expr1->toString() + "/" + expr2->toString();
+}
+toString(mod){
+    return expr1->toString() + "%" + expr2->toString();
+}
+toString(less){
+    return expr1->toString() + "<" + expr2->toString();
+}
+toString(greater){
+    return expr1->toString() + ">" + expr2->toString();
+}
+toString(lte){
+    return expr1->toString() + "<=" + expr2->toString();
+}
+toString(gte){
+    return expr1->toString() + ">=" + expr2->toString();
+}
+toString(equal){
+    return expr1->toString() + "==" + expr2->toString();
+}
+toString(nequal){
+    return expr1->toString() + "!=" + expr2->toString();
+}
+
+toString(stmt_block){
+    return first->toString() + "\n" +  next->toString();
+}
+toString(ifStmt){
+    return ("if(" + condition->toString() + ")\n" + "{\n" + then_s->toString() + "\n}\n" + "else {\n" + else_s->toString() + "\n}\n" );
+}
+
+toString(for_stmt){}
+
+toString(method_declaration){
+    std::string tp;
+    if(t == int_type) { tp = "int"; } 
+    else if(t == bool_type ){ tp = "bool"; }
+    else { tp = "void"; }
+
+    std::string params_s;
+    for(int i = 0; i < params.size(); i++){
+        params_s += params.at(i)->toString();
+    }
+
+    return (tp + " " + name + "(" + params_s + "){\n" + block->toString() + "}\n");
+}
+toString(param_declaration){
+    std::string tp;
+    if(t == int_type) { tp = "int"; } else { tp = "bool"; }
+
+    return tp + " " + name;
+}
+
+toString(field_assign){
+    std::string tp;
+    if(t == int_type) { tp = "int"; } else { tp = "bool"; }
+
+    return tp + " " + name + " " + expr->toString();
+}
+
+toString(field_declaration) {
+    std::string tp;
+    if(t == int_type) { tp = "int"; } else { tp = "bool"; }
+
+    std::string decl_s;
+    for(int i = 0; i < names.size(); i++){
+        decl_s += names.at(i);
+        decl_s += " ";
+    }
+
+    return tp + " " + decl_s + ";";
+}
+
+toString(assign){
+    return id + " " + expr->toString();
+}
+
+toString(while_stmt){
+    return ("while(" + condition->toString() + "){\n" + stmt->toString() + "\n}");
+}
+
+toString(println){
+    return ("System.out.println(" + expr->toString() + ")" );
+}
+
+toString(print){
+    return ("System.out.print(" + expr->toString() + ")" );
+}
+toString(empty_node){
+    return "";
+}
 
 infer_type(str){
     type = {string_type};
@@ -150,427 +1022,8 @@ infer_type(nequal){
     type = {int_type};
 }
 
-infer_type(ifStmt){
-}
-
-infer_type(assign){
-}
-
-infer_type(while_stmt){
-}
-
-infer_type(print){
-}
-
-infer_type(empty_node){
-}
-
-infer_type(stmt_block){
-}
-
 infer_type(id){
 }
 
-exec(empty_node){
-
-}
-
-exec(stmt_block){
-    first->exec(vars);
-    next->exec(vars);
-}
-
-exec(print){
-    expr->exec(vars);
-    expr->infer_type();
-    if(expr->type == int_type)
-        std::cout << expr->value << std::endl;
-    else{
-        expr->str_val.erase(0,1);
-        expr->str_val.erase(expr->str_val.size() - 1);
-        std::cout << expr->str_val << std::endl;
-    }
-}
-
-exec(ifStmt){
-    condition->exec(vars);
-    if(condition->value){
-        then_s->exec(vars);
-    }
-    else{
-        else_s->exec(vars);
-    }
-}
-
-exec(while_stmt){
-    condition->exec(vars);
-    while(condition->value){
-        stmt->exec(vars);
-        condition->exec(vars);
-    }
-}
-
-exec(assign){%option lang = "C++"
-%option reentrant
-
-%decls %{
-    #include <string>
-    #include <cstddef> //for size_t
-    #include <cmath>
-    #include <unordered_map>
-    using string_t = std::string;
-    using map_t = std::unordered_map<std::string, int>;
-    
-
-%}
-
-%{
-    #include "ast.h"
-    #include <iostream>
-    #include <stdio.h>
-    void yyerror(const char *msg);
-    
-%}
-
-%enum type_code = 
-{
-    int_type,
-    string_type
-}
-
-%node ASTNode %abstract %typedef = 
-{
-    %nocreate int value = { 0 };
-    %nocreate string_t str_val = { "" };
-    %nocreate type_code type = {int_type};  
-
-}
-
-%node expression ASTNode %abstract =
-{
-}
-
-%node binary expression %abstract = 
-{
-    ASTNode *expr1;
-    ASTNode *expr2;
-}
-
-%node intnum expression = 
-{
-    int num;
-}
-
-%node str expression =
-{
-    string_t val;
-}
-
-%node id expression =
-{
-    string_t id_val;
-}
-
-%node plus binary
-%node minus binary
-%node multiply binary
-%node divide binary
-%node less binary
-%node greater binary
-%node lte binary
-%node gte binary
-%node equal binary
-%node nequal binary
-
-%node statement ASTNode %abstract
-
-%node stmt_block ASTNode = {
-    ASTNode * first;
-    ASTNode * next;
-}
-
-%node ifStmt statement = {
-    ASTNode * condition;
-    ASTNode * then_s;
-    ASTNode * else_s;
-}
-
-%node assign statement = {
-    string_t id;
-    ASTNode * expression;
-}
-
-%node while_stmt statement = {
-    ASTNode * condition;
-    ASTNode * stmt;
-}
-
-%node print statement = {
-    ASTNode * expr;
-}
-
-%node empty_node statement
-
-%operation %virtual void exec(ASTNode *this, map_t & vars)
-%operation %virtual void infer_type(ASTNode * this)
-
-infer_type(str){
-    type = {string_type};
-}
-
-infer_type(intnum){
-    type = {int_type};
-}
-
-infer_type(plus){
-    type = {int_type};
-}
-
-infer_type(minus){
-    type = {int_type};
-}
-
-infer_type(multiply){
-    type = {int_type};
-}
-
-infer_type(divide){
-    type = {int_type};
-}
-
-infer_type(less){
-    type = {int_type};
-}
-
-infer_type(greater){
-    type = {int_type};
-}
-
-infer_type(lte){
-    type = {int_type};
-}
-
-infer_type(gte){
-    type = {int_type};
-}
-
-infer_type(equal){
-    type = {int_type};
-}
-
-infer_type(nequal){
-    type = {int_type};
-}
-
-infer_type(ifStmt){
-}
-
-infer_type(assign){
-}
-
-infer_type(while_stmt){
-}
-
-infer_type(print){
-}
-
-infer_type(empty_node){
-}
-
-infer_type(stmt_block){
-}
-
-infer_type(id){
-}
-
-exec(empty_node){
-
-}
-
-exec(stmt_block){
-    first->exec(vars);
-    next->exec(vars);
-}
-
-exec(print){
-    expr->exec(vars);
-    expr->infer_type();
-    if(expr->type == int_type)
-        std::cout << expr->value << std::endl;
-    else{
-        expr->str_val.erase(0,1);
-        expr->str_val.erase(expr->str_val.size() - 1);
-        std::cout << expr->str_val << std::endl;
-    }
-}
-
-exec(ifStmt){
-    condition->exec(vars);
-    if(condition->value){
-        then_s->exec(vars);
-    }
-    else{
-        else_s->exec(vars);
-    }
-}
-
-exec(while_stmt){
-    condition->exec(vars);
-    while(condition->value){
-        stmt->exec(vars);
-        condition->exec(vars);
-    }
-}
-
-exec(assign){
-    expression->exec(vars);
-    vars[id] = expression->value;
-}
-
-exec(plus){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value + expr2->value;
-}
-
-exec(minus){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value - expr2->value;
-}
-
-exec(multiply){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value * expr2->value;
-}
-
-exec(divide){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value / expr2->value;
-}
-
-exec(less){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value < expr2->value;
-}
-
-exec(greater){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value > expr2->value;
-}
-
-exec(gte){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value >= expr2->value;
-}
-
-exec(lte){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value <= expr2->value;
-}
-
-exec(equal){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = (expr1->value == expr2->value);
-}
-
-exec(nequal){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = (expr1->value != expr2->value);
-}
-
-exec(intnum){
-    value = num;
-}
-
-exec(id){
-    value = vars[id_val];
-}
-
-exec(str){
-    str_val = val;
-}
-
-    expression->exec(vars);
-    vars[id] = expression->value;
-}
-
-exec(plus){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value + expr2->value;
-}
-
-exec(minus){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value - expr2->value;
-}
-
-exec(multiply){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value * expr2->value;
-}
-
-exec(divide){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value / expr2->value;
-}
-
-exec(less){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value < expr2->value;
-}
-
-exec(greater){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value > expr2->value;
-}
-
-exec(gte){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value >= expr2->value;
-}
-
-exec(lte){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = expr1->value <= expr2->value;
-}
-
-exec(equal){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = (expr1->value == expr2->value);
-}
-
-exec(nequal){
-    expr1->exec(vars);
-    expr2->exec(vars);
-    value = (expr1->value != expr2->value);
-}
-
-exec(intnum){
-    value = num;
-}
-
-exec(id){
-    value = vars[id_val];
-}
-
-exec(str){
-    str_val = val;
-}
+infer_type(bool_expr) {}
+infer_type(mod){}

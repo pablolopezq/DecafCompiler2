@@ -1,0 +1,24 @@
+x = 97
+y = 15670
+x > y: false
+x < y:  true
+x >= y: false
+x <= y: true
+x != y: true
+x == y: false
+x = 98765
+y = 15670
+x > y: true
+x < y:  false
+x >= y: true
+x <= y: false
+x != y: true
+x == y: false
+x = 98765
+y = 98765
+x > y: false
+x < y:  false
+x >= y: true
+x <= y: true
+x != y: false
+x == y: true

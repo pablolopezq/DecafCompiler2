@@ -7,11 +7,11 @@
 %{
     #include <cstdio>
     #include <sstream>
-    #include "lexer.h"
-    #include "tokens.h"
+    #include "decaf_lexer.h"
+    #include "decaf_tokens.h"
 
     #define YY_EXTRA_TYPE std::istream*
-    #define YY_DECL int Lexer::_getNextToken(Lexer::semantic_type& yyval, yyscan_t yyscanner)
+    #define YY_DECL int DecafLexer::_getNextToken(DecafLexer::semantic_type& yyval, yyscan_t yyscanner)
     #define YY_INPUT(buf, result, max_size)\
     do{\
         std::istream* in = yyget_extra(yyscanner);\
@@ -21,8 +21,8 @@
 
 %}
 
-[0-9]                    {DIGIT}
-[_a-zA-Z][_a-zA-Z0-9]*   {IDENT}
+DIGIT [0-9]
+IDENT [_a-zA-Z][_a-zA-Z0-9]*
 
 %%
 
@@ -71,7 +71,10 @@
 "true"           { return makeToken(yytext, yyleng, token::KW_TRUE); }
 "void"           { return makeToken(yytext, yyleng, token::KW_VOID); }
 "while"          { return makeToken(yytext, yyleng, token::KW_WHILE); }
-
+"System.out.print" { return makeToken(yytext, yyleng, token::PRINT); }
+"System.out.println" { return makeToken(yytext, yyleng, token::PRINTLN); }
+"System.in.read" { return makeToken(yytext, yyleng, token::READ); }
+"Random.nextInt" { return makeToken(yytext, yyleng, token::RANDOMINT); }
 
 
 {DIGIT}+               { yyval.emplace<int>(std::strtol(yytext, nullptr,10));
@@ -83,7 +86,9 @@
 \"(\\.|[^"\\])*\"      { yyval.emplace<std::string>(yytext, yyleng); 
                          return makeToken(yytext, yyleng, token::STRING); }
 
-<<EOF>>                { return makeToken(yytext, yyleng, token::Eof); }
+\'.\'                  { yyval.emplace<std::string>(yytext, yyleng); 
+                         return makeToken(yytext, yyleng, token::CHAR_CONST);}
+
 
 [ \t\n\r]+  {  }
 
@@ -93,7 +98,7 @@
 
 %%
 
-Lexer::Lexer(std::istream &in) : in(in){
+DecafLexer::DecafLexer(std::istream &in) : in(in){
     yylex_init_extra(&in, &scanner); 
 }
 

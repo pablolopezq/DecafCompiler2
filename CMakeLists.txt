@@ -6,7 +6,7 @@ set( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++14" )
 # Run bison to generate the parser
 add_custom_command (
   OUTPUT decaf_parser.cpp decaf_tokens.h
-  COMMAND bison -o parser.cpp --defines=tokens.h ${PROJECT_SOURCE_DIR}/src/decaf_parser.y
+  COMMAND bison -o decaf_parser.cpp --defines=decaf_tokens.h ${PROJECT_SOURCE_DIR}/src/decaf_parser.y
   MAIN_DEPENDENCY ${PROJECT_SOURCE_DIR}/src/decaf_parser.y
   )
 
@@ -27,7 +27,9 @@ add_custom_command (
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/src/)
 
-add_executable(decaf decaf_parser.cpp
-                         decaf_lexer.cpp
-                         decaf_ast.cpp 
-                         ${PROJECT_SOURCE_DIR}/src/main.cpp)
+add_executable(decaf  
+                      decaf_parser.cpp
+                      decaf_lexer.cpp
+                      decaf_ast.cpp
+                      #${PROJECT_SOURCE_DIR}/src/decaf_x86gen.cpp
+                      ${PROJECT_SOURCE_DIR}/src/main.cpp)

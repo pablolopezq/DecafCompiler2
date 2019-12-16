@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 
-#include "tokens.h"
+#include "decaf_tokens.h"
 
 using yyscan_t = void *;
 

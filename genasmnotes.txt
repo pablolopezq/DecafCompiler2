@@ -1,0 +1,31 @@
+class asmgen
+{
+    constructuor(ostream)
+
+    write(lista de funcdef) // funcdef tiene nombre, params, y lista de stmts
+    {
+        para cada funcdef{
+            generar prologo
+            generar codigo de func
+            generar epilogo
+        }
+
+        generar main/printf/sections
+    }
+
+    genasm(funcdef para conseguir el nombre, lista de string literals){
+        instanciar el visitador y visitar cada stmt del nodo
+        llevar cuenta de cuales stmts ya fueron visitados
+    }
+
+    class string literal table
+    {
+        hashtbale<string, string>
+    }
+
+    class visitor
+    {
+        visit for every cfg node
+    }
+
+}
