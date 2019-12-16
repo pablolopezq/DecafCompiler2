@@ -1,0 +1,4 @@
+X = 5 Y = 7
+X is not equal to Y
+X = 456 Y = 456
+X is equal to Y

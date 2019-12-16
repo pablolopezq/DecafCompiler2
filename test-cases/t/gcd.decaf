@@ -1,13 +1,11 @@
 class GreatestCommonDivisor
 {
-	int a = 10;
-	int b = 20;
 
 	void main()
 	{
 		int x, y, z;
-		x = a;
-		y = b;
+		x = 10;
+		y = 20;
 		z = gcd(x, y);
 
 		System.out.println(z);

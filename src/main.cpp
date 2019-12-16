@@ -99,12 +99,14 @@ int main(int argc, char * argv[]){
         size_t firstindex = file_name.find_last_of("/");
         std::string rname = file_name.substr(0, lastindex);
         std::string rawname = rname.substr(firstindex+1, rname.size());
-        std::cout << rawname << std::endl;
+        // std::cout << rawname << std::endl;
         outfile.open("out.asm", std::ios::out);
         std::ostream out(&outfile);
 
-        GenX86 genasm(out);
+        GenX86 genasm(std::cout);
         genasm.write(funcs);
+        GenX86 gen(out);
+        gen.write(funcs);
         outfile.close();
 
         // std::cout << "Parsed and created AST\n";

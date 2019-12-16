@@ -23,6 +23,6 @@ class ArithOperators {
         System.out.print("Div ");
         System.out.println(x / y);
         System.out.print("Mod ");
-        System.out.println(x % y);
+        System.out.println(x % y); 
     }
 }

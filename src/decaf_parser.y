@@ -58,8 +58,7 @@
 
 %%
 
-program : KW_CLASS IDENT '{' program_block '}' { std::cout << "Parsed successfully\n"; 
-                                                
+program : KW_CLASS IDENT '{' program_block '}' { 
                                                 FuncDef * fd;
 
                                                 for(auto s : $4){

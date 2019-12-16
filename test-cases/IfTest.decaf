@@ -38,5 +38,6 @@ class IfTest {
         else {
             System.out.print("X is not equal to Y\n");
         }
+        
     }
 }

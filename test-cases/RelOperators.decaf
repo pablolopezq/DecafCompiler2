@@ -37,8 +37,8 @@ class RelOperators {
     
         // Equal
         System.out.print("x == y: ");
-        System.out.println(x == y);
-        
+        System.out.println(x == y); 
+         
         x = 98765;
         y = 15670;
     
@@ -70,7 +70,7 @@ class RelOperators {
         // Equal
         System.out.print("x == y: ");
         System.out.println(x == y);
-        
+      
         x = 98765;
         y = 98765;
     
@@ -101,6 +101,6 @@ class RelOperators {
     
         // Equal
         System.out.print("x == y: ");
-        System.out.println(x == y);
+        System.out.println(x == y);  
     }    
 }

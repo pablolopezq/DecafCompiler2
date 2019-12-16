@@ -252,6 +252,8 @@ isUnary(bool_expr){
 
 genFunc(method_declaration){
     CFGTuple t = block->AST2CFG();
+    CFG::RetStatement * ret = new CFG::RetStatement();
+    t.second->addStatement(ret);
     Func f = new FuncDef(name, t);
     return f;
 }

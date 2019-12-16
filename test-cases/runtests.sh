@@ -50,7 +50,7 @@ for file in $(ls *.decaf); do
     fi
 
     $TEMP_DIR/$BASENAME > $OUTPUT_DIR/$BASENAME.txt
-    diff $OUTPUT_DIR/$BASENAME.txt $EXPECTED_DIR/$BASENAME.txt 2>/dev/null
+    diff $OUTPUT_DIR/$BASENAME.txt $EXPECTED_DIR/$BASENAME.out 2>/dev/null
     if [ $? -ne 0 ]; then
         echo -e "Testing $file ... \e[31mFailed\e[0m"
         failed=$((failed + 1))

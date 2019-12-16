@@ -128,7 +128,7 @@ private:
                 HANDLE_NODE(ExprStatement);
                 
                 default:
-                    std::cout << "no visit for node\n";
+                    // std::cout << "no visit for node\n";
                     break;
             }
         }
@@ -215,7 +215,7 @@ private:
 
         Visitor visitor(table, func);
 
-        std::cout << func.getName() << ":\n";
+        // std::cout << func.getName() << ":\n";
     
         while(true){
 
@@ -232,11 +232,11 @@ private:
 
             std::vector<Node*>::iterator it = find(visited.begin(), visited.end(), current_node);
             if(it == visited.end()){
-                std::cout << current_node->getLabel() + ":\n";
+                // std::cout << current_node->getLabel() + ":\n";
                 out << current_node->getLabel() + ":\n";
                 visitor.setCurrentNode(current_node);
                 for(auto stmt : current_node->statements){
-                    std::cout << visitor.visit(stmt) << std::endl;
+                    // std::cout << visitor.visit(stmt) << std::endl;
                     out << visitor.visit(stmt);
                 }
                 visited.push_back(current_node);
@@ -261,10 +261,10 @@ private:
                 }
                 else{
                     /* add both nodes */
-                    std::cout << "adding double edge\n";
+                    // std::cout << "adding double edge\n";
                     DoubleEdge * de = reinterpret_cast<DoubleEdge*>(edge);
 
-                    std::cout << visitor.visit(de) << std::endl;
+                    // std::cout << visitor.visit(de) << std::endl;
                     out << visitor.visit(de);
                     // if(de->tnode->getKind() != NodeKind::NopNode)
                     queue.push(de->tnode);
