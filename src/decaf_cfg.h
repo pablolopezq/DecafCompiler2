@@ -499,7 +499,7 @@ public:
 class DoubleEdge : public Edge {
 
 public:
-    DoubleEdge(Node * tnode, Node * fnode) : tnode(tnode), fnode(fnode) {}
+    DoubleEdge(Node * tnode, Node * fnode, Expr * condition) : tnode(tnode), fnode(fnode), condition(condition) {}
 
     void printNodes(){
         tnode->printCFG();

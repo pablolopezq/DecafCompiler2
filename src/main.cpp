@@ -93,6 +93,13 @@ int main(int argc, char * argv[]){
         // }
 
         std::filebuf outfile;
+        char * name = argv[1];
+        std::string file_name = std::string(name);
+        size_t lastindex = file_name.find_last_of("."); 
+        size_t firstindex = file_name.find_last_of("/");
+        std::string rname = file_name.substr(0, lastindex);
+        std::string rawname = rname.substr(firstindex+1, rname.size());
+        std::cout << rawname << std::endl;
         outfile.open("out.asm", std::ios::out);
         std::ostream out(&outfile);
 

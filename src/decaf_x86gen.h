@@ -187,16 +187,16 @@ private:
 
         std::string getJmp(Expr * expr){
             switch(expr->getKind()){
-                case NodeKind::AddExpr: return "je";
-                case NodeKind::SubExpr: return "je";
-                case NodeKind::MultExpr: return "je";
-                case NodeKind::DivExpr: return "je";
-                case NodeKind::GreaterExpr: return "jg";
-                case NodeKind::GTEExpr: return "jge";
-                case NodeKind::LessExpr: return "jl";
-                case NodeKind::LTEExpr: return "jle";
-                case NodeKind::EqualExpr: return "je";
-                case NodeKind::NequalExpr: return "jne";
+                case NodeKind::AddExpr: return "je ";
+                case NodeKind::SubExpr: return "je ";
+                case NodeKind::MultExpr: return "je ";
+                case NodeKind::DivExpr: return "je ";
+                case NodeKind::GreaterExpr: return "jg ";
+                case NodeKind::GTEExpr: return "jge ";
+                case NodeKind::LessExpr: return "jl ";
+                case NodeKind::LTEExpr: return "jle ";
+                case NodeKind::EqualExpr: return "je ";
+                case NodeKind::NequalExpr: return "jne ";
                 default: return "";
             }
         }
@@ -230,13 +230,10 @@ private:
 
             queue.pop();
 
-            if(!current_node->isNop()){
-                std::cout << current_node->getLabel() + ":\n";
-                out << current_node->getLabel() + ":\n";
-            }
-            
             std::vector<Node*>::iterator it = find(visited.begin(), visited.end(), current_node);
             if(it == visited.end()){
+                std::cout << current_node->getLabel() + ":\n";
+                out << current_node->getLabel() + ":\n";
                 visitor.setCurrentNode(current_node);
                 for(auto stmt : current_node->statements){
                     std::cout << visitor.visit(stmt) << std::endl;
@@ -255,23 +252,24 @@ private:
                     //     std::cout << "b\n";
                     // }
                     // std::cout << se->next->label << std::endl;
-                    if(se->next->label != "nop"){
-                        std::cout << visitor.visit(se) << std::endl;
-                        out << visitor.visit(se);
-                    }
+                    // if(se->next->label != "nop"){
+                    //     std::cout << visitor.visit(se) << std::endl;
+                    //     out << visitor.visit(se);
+                    // }
+                    out << visitor.visit(se);
                     queue.push(se->next);
                 }
                 else{
                     /* add both nodes */
-                    // std::cout << "adding double edge\n";
+                    std::cout << "adding double edge\n";
                     DoubleEdge * de = reinterpret_cast<DoubleEdge*>(edge);
-                    
+
                     std::cout << visitor.visit(de) << std::endl;
                     out << visitor.visit(de);
-                    if(de->tnode->getKind() != NodeKind::NopNode)
-                        queue.push(de->tnode);
-                    if(de->fnode->getKind() != NodeKind::NopNode)
-                        queue.push(de->fnode);
+                    // if(de->tnode->getKind() != NodeKind::NopNode)
+                    queue.push(de->tnode);
+                    // if(de->fnode->getKind() != NodeKind::NopNode)
+                    queue.push(de->fnode);
                 }
             }
         }

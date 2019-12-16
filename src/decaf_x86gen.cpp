@@ -13,7 +13,7 @@ std::string GenX86::Visitor::visit(CFG::StringOperand * node){
 }
 
 std::string GenX86::Visitor::visit(IDOperand * node){
-    std::cout << "id op\n";
+    // std::cout << "id op\n";
     std::string val = node->toString();
     std::vector<std::string>::iterator it;
 

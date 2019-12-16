@@ -46,8 +46,8 @@
 %token <std::string> CHAR_CONST
 
 %type<expression*> expr constant
-%type<statement*> system_call stmt var_decl block_body block
-%type<statement*> field_decl method_decl decl
+%type<statement*> system_call stmt var_decl block_body block else
+%type<statement*> field_decl method_decl decl assign
 %type<std::vector<statement*>> params program_block
 %type<std::vector<std::string>> multiple_decl
 %type<type_code> type
@@ -69,7 +69,6 @@ program : KW_CLASS IDENT '{' program_block '}' { std::cout << "Parsed successful
                                                         fd = md->genFunc();
                                                         funcs.push_back(fd);
                                                     }
-                                                    
                                                 }
                                                }
 ;
@@ -95,6 +94,7 @@ constant : NUMBER {  $$ = nodes.intnumCreate($1);  }
          | CHAR_CONST {  $$ = nodes.strCreate($1);  }
          | KW_FALSE {  $$ = nodes.bool_exprCreate(0);  }
          | KW_TRUE {  $$ = nodes.bool_exprCreate(1);  }
+         | expr { $$ = $1; }
 ;
 
 method_decl : type IDENT '(' params ')' block {  $$ = nodes.method_declarationCreate($1, $2, $4, $6); }
@@ -103,7 +103,7 @@ method_decl : type IDENT '(' params ')' block {  $$ = nodes.method_declarationCr
 
 params : decl ',' params {  $3.push_back($1); $$ = $3;  }
        | decl {  $$.push_back($1);  }
-       | %empty {  $$.push_back(nodes.empty_nodeCreate());  }
+       | %empty {  $$.push_back(nodes.empty_nodeCreate()); }
 ;
 
 decl : type IDENT { $$ = nodes.param_declarationCreate($1, $2);  }
@@ -112,17 +112,26 @@ decl : type IDENT { $$ = nodes.param_declarationCreate($1, $2);  }
 block : '{' block_body '}' {  $$ = $2;  }
 ;
 
-block_body : var_decl block_body { $$ = nodes.stmt_blockCreate(nodes.empty_nodeCreate(), $2); std::cout << "vardecl\n";}
-           | stmt block_body {  $$ = nodes.stmt_blockCreate($1, $2);  }
+block_body : var_decl block_body { $$ = nodes.stmt_blockCreate(nodes.empty_nodeCreate(), $2); }
+           | stmt block_body {  $$ = nodes.stmt_blockCreate($1, $2); }
            | %empty {  $$ = nodes.empty_nodeCreate();  }
 ;
 
 var_decl : type multiple_decl ';' { $$ = nodes.field_declarationCreate($1, $2);  }
 ;
 
-stmt : IDENT ASSIGN expr ';' {  $$ = nodes.assignCreate($1, $3);  }
+stmt : IDENT ASSIGN expr ';' { $$ = nodes.assignCreate($1, $3); }
+     | decl { $$ = nodes.empty_nodeCreate(); }
      | system_call {  $$ = $1;  }
+     | KW_IF '(' expr ')' block else { $$ = nodes.ifStmtCreate($3, $5, $6); }
+     | KW_WHILE '(' expr ')' block { $$ = nodes.while_stmtCreate($3, $5); }
+     | KW_FOR '(' assign ';' expr ';' assign ')' block { $$ = nodes.for_stmtCreate($3, $5, $7, $9); }
 ;
+
+assign : IDENT ASSIGN constant {  $$ = nodes.assignCreate($1, $3); }
+
+else : KW_ELSE block { $$ = $2; }
+     | %empty { $$ = nodes.stmt_blockCreate(nodes.empty_nodeCreate(), nodes.empty_nodeCreate()); }
 
 system_call : PRINT '(' expr ')' ';' {  $$ = nodes.printCreate($3);  }
             | PRINTLN '(' expr ')' ';' { $$ =  nodes.printlnCreate($3);  }
@@ -141,7 +150,7 @@ expr : expr '+' expr { $$ = nodes.plusCreate($1, $3);  }
      | expr NEQUAL expr { $$ = nodes.nequalCreate($1, $3); }
      | '(' expr ')' { $$ = $2; }
      | NUMBER { $$ = nodes.intnumCreate($1);}
-     | IDENT { $$ = nodes.idCreate($1) ;std::cout << "id op\n"; }
+     | IDENT { $$ = nodes.idCreate($1) ; }
      | STRING { $$ = nodes.strCreate($1); }
 ;
 
