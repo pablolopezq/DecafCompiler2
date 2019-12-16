@@ -32,13 +32,13 @@ public:
             out << f->getName() << ":\n";
 
             out << "push ebp\nmov ebp, esp\n" <<
-                    "add esp, " << std::to_string(num_params*4) << "\n";
+                    "add esp, " << 4 << "\n";
 
             /* generar codigo de f */
             gen_asm(*f, table); 
 
             out << f->getName() << "_end:\n";
-            out << "leave\n ret\n";
+            out << "leave\nret\n";
 
         }
         std::unordered_map<std::string, std::string> lits = table.getTable();
@@ -103,6 +103,7 @@ private:
                 HANDLE_NODE(LValueOperand);
                 HANDLE_NODE(StringOperand);
                 HANDLE_NODE(IntOperand);
+                HANDLE_NODE(UnaryExpr);
                 HANDLE_NODE(AddExpr);
                 HANDLE_NODE(SubExpr);
                 HANDLE_NODE(MultExpr);
@@ -145,6 +146,7 @@ private:
             it = find(vars.begin(), vars.end(), val);
             if(it != vars.end()){
                 int index = std::distance(vars.begin(), it);
+                index++;
                 int stack_pos = index*4;
                 return stack_pos;
             }
@@ -158,6 +160,7 @@ private:
         std::string visit(IDOperand * node);
         std::string visit(LValueOperand * node);
         std::string visit(StringOperand * node);
+        std::string visit(UnaryExpr * node);
         std::string visit(AddExpr * node);
         std::string visit(SubExpr * node);
         std::string visit(MultExpr * node);

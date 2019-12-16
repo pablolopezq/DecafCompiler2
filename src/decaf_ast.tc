@@ -247,7 +247,7 @@ AST2CFG(println){
     if(expr->isUnary()){
         unary * u = static_cast<unary*>(expr);
         CFG::Operand * op = u->OP2CFG();
-        if(op->getKind() == NodeKind::IntOperand){
+        if(op->getKind() == NodeKind::IntOperand || op->getKind() == NodeKind::IDOperand){
             CFG::ParamStatement * par = new CFG::ParamStatement(op);
             CFG::StringOperand * s = new CFG::StringOperand("a%da");
             CFG::ParamStatement * par1 = new CFG::ParamStatement(s);
@@ -521,11 +521,60 @@ EXPR2CFG(nequal){
     CFG::NequalExpr * nequal = new CFG::NequalExpr(op1, op2);
     return nequal;
 }
+
+AST2CFG(assign){
+    CFG::Node * n = new CFG::Node();
+    CFG::AssignStatement * assign;
+    CFG::Expr * ex;
+    CFG::IDOperand * idop = new CFG::IDOperand(id);
+    if(expr->isUnary()){
+        unary * u = static_cast<unary*>(expr);
+        CFG::Operand * op = u->OP2CFG();
+        ex = new CFG::UnaryExpr(op);
+        assign = new CFG::AssignStatement(idop, ex);
+        n->addStatement(assign);
+    }
+    else{
+        binary * b = static_cast<binary*>(expr);
+        unary * u1 = static_cast<unary*>(b->expr1);
+        unary * u2 = static_cast<unary*>(b->expr2);
+        CFG::Operand * op1 = u1->OP2CFG();
+        CFG::Operand * op2 = u2->OP2CFG();
+        CFG::Expr * ex;
+        b->infer_bintype();
+        switch(b->bt){
+            case plus_type: ex = new CFG::AddExpr(op1,op2); break;
+            case minus_type: ex = new CFG::SubExpr(op1,op2); break;
+            case mul_type: ex = new CFG::MultExpr(op1,op2); break;
+            case div_type: ex = new CFG::DivExpr(op1,op2); break;
+            case greater_type: ex = new CFG::GreaterExpr(op1,op2); break;
+            case less_type: ex = new CFG::LessExpr(op1,op2); break;
+            case gte_type: ex = new CFG::GTEExpr(op1,op2); break;
+            case lte_type: ex = new CFG::LTEExpr(op1,op2); break;
+            case equal_type: ex = new CFG::EqualExpr(op1,op2); break;
+            case nequal_type: ex = new CFG::NequalExpr(op1,op2); break;
+        }        
+        CFG::ExprStatement * e = new CFG::ExprStatement(ex);
+        CFG::LValueOperand * l = new CFG::LValueOperand("eax");
+        CFG::UnaryExpr * un = new CFG::UnaryExpr(l);
+        assign = new CFG::AssignStatement(idop, un);
+        n->addStatement(e);
+        n->addStatement(assign);
+    }
+    std::string lbl = "LBL" + std::to_string(label_counter++);
+    n->setLabel(lbl);
+
+    CFG::Node * nop = new CFG::Node();
+    nop->setLabel("nop");
+    nop->setNop();
+    n->setEdge(new SingleEdge(nop));    
+
+    return std::make_pair(n, nop);
+}
 AST2CFG(ifStmt){}
 AST2CFG(param_declaration){}
 AST2CFG(field_assign){}
 AST2CFG(field_declaration){}
-AST2CFG(assign){}
 AST2CFG(while_stmt){}
 AST2CFG(empty_node){
     CFG::Node * nop = new CFG::Node();

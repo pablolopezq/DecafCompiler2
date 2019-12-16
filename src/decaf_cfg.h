@@ -331,7 +331,7 @@ public:
 class AssignStatement : public Statement {
 
 public:
-    AssignStatement(LValueOperand * ident, Expr * expr) : ident(ident), expr(expr) {}
+    AssignStatement(IDOperand * ident, Expr * expr) : ident(ident), expr(expr) {}
 
     std::string toString() {
         return ident->toString() + " = " + expr->toString();
@@ -341,7 +341,7 @@ public:
         return NodeKind::AssignStatement;
     }
 
-    LValueOperand * ident;
+    IDOperand * ident;
     Expr * expr;
 };
 

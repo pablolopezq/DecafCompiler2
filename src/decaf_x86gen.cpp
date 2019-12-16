@@ -19,8 +19,9 @@ std::string GenX86::Visitor::visit(IDOperand * node){
     it = find(vars.begin(), vars.end(), val);
     if(it != vars.end()){
         int index = std::distance(vars.begin(), it);
+        index++;
         int stack_pos = index*4;
-        return "[ebp-" + std::to_string(stack_pos) + "]";
+        return "dword[ebp-" + std::to_string(stack_pos) + "]";
     }
     else{
         vars.push_back(val);
@@ -108,6 +109,14 @@ std::string GenX86::Visitor::visit(NequalExpr * node){
     std::string ret;
 
     ret = "mov eax, " + visit(node->op1) + "\ncmp eax, " + visit(node->op2) + "\nsetne bl\n";
+
+    return ret;
+}
+
+std::string GenX86::Visitor::visit(UnaryExpr * node){
+    std::string ret;
+
+    ret = "mov eax, " + visit(node->op);
 
     return ret;
 }
