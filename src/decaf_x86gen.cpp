@@ -51,7 +51,7 @@ std::string GenX86::Visitor::visit(SubExpr * node){
 std::string GenX86::Visitor::visit(MultExpr * node){
     std::string ret;
 
-    ret = "mov eax, " + node->op1->toString() + "\nmult eax, " + node->op2->toString() + "\n"; 
+    ret = "mov eax, " + node->op1->toString() + "\ncdq\nmov ecx, " + node->op2->toString() + "\nimul ecx\n"; 
 
     return ret;
 }
@@ -59,7 +59,7 @@ std::string GenX86::Visitor::visit(MultExpr * node){
 std::string GenX86::Visitor::visit(DivExpr * node){
     std::string ret;
 
-    ret = "mov eax, " + node->op1->toString() + "cdq\nmov ecx, " + node->op2->toString() + "\nidiv";
+    ret = "mov eax, " + node->op1->toString() + "\ncdq\nmov ecx, " + node->op2->toString() + "\nidiv ecx\n";
 
     return ret;
 }

@@ -43,6 +43,19 @@
     void_type
 }
 
+%enum bin_type = {
+    plus_type,
+    minus_type,
+    mul_type,
+    div_type,
+    greater_type,
+    less_type,
+    gte_type,
+    lte_type,
+    equal_type,
+    nequal_type,
+}
+
 %node ASTNode %abstract %typedef = 
 {
     %nocreate int value = { 0 };
@@ -56,6 +69,7 @@
 {
     expression *expr1;
     expression *expr2;
+    %nocreate bin_type bt = {plus_type};
 }
 
 %node unary expression %abstract = {}
@@ -149,12 +163,24 @@
 
 %operation %virtual void exec(ASTNode *this, map_t & vars)
 %operation %virtual void infer_type(expression * this)
+%operation %virtual void infer_bintype(binary * this)
 %operation %virtual string_t toString(ASTNode * this)
 %operation %virtual CFGTuple AST2CFG(statement * this)
 %operation %virtual CFGExpr EXPR2CFG(binary * this)
 %operation %virtual CFGOP OP2CFG(unary * this)
 %operation %virtual Func genFunc(method_declaration * this)
 %operation %virtual bool isUnary(expression * this)
+
+infer_bintype(plus){ bt = plus_type; }
+infer_bintype(minus){ bt = minus_type; }
+infer_bintype(multiply){ bt = mul_type; }
+infer_bintype(divide){ bt = div_type; }
+infer_bintype(greater){ bt = greater_type; }
+infer_bintype(less){ bt = less_type; }
+infer_bintype(gte){ bt = gte_type; }
+infer_bintype(lte){ bt = lte_type; }
+infer_bintype(equal){ bt = equal_type; }
+infer_bintype(nequal){ bt = nequal_type; }
 
 isUnary(plus){
     return false;
@@ -239,8 +265,21 @@ AST2CFG(println){
         unary * u2 = static_cast<unary*>(b->expr2);
         CFG::Operand * op1 = u1->OP2CFG();
         CFG::Operand * op2 = u2->OP2CFG();
-        CFG::AddExpr * add = new CFG::AddExpr(op1, op2);
-        CFG::ExprStatement * e = new CFG::ExprStatement(add);
+        CFG::Expr * ex;
+        b->infer_bintype();
+        switch(b->bt){
+            case plus_type: ex = new CFG::AddExpr(op1,op2); break;
+            case minus_type: ex = new CFG::SubExpr(op1,op2); break;
+            case mul_type: ex = new CFG::MultExpr(op1,op2); break;
+            case div_type: ex = new CFG::DivExpr(op1,op2); break;
+            case greater_type: ex = new CFG::GreaterExpr(op1,op2); break;
+            case less_type: ex = new CFG::LessExpr(op1,op2); break;
+            case gte_type: ex = new CFG::GTEExpr(op1,op2); break;
+            case lte_type: ex = new CFG::LTEExpr(op1,op2); break;
+            case equal_type: ex = new CFG::EqualExpr(op1,op2); break;
+            case nequal_type: ex = new CFG::NequalExpr(op1,op2); break;
+        }
+        CFG::ExprStatement * e = new CFG::ExprStatement(ex);
         CFG::LValueOperand * reg = new CFG::LValueOperand("eax");
         CFG::ParamStatement * par = new CFG::ParamStatement(reg);
         CFG::StringOperand * s = new CFG::StringOperand("a%da");
@@ -286,8 +325,21 @@ AST2CFG(print){
         unary * u2 = static_cast<unary*>(b->expr2);
         CFG::Operand * op1 = u1->OP2CFG();
         CFG::Operand * op2 = u2->OP2CFG();
-        CFG::AddExpr * add = new CFG::AddExpr(op1, op2);
-        CFG::ExprStatement * e = new CFG::ExprStatement(add);
+        CFG::Expr * ex;
+        b->infer_bintype();
+        switch(b->bt){
+            case plus_type: ex = new CFG::AddExpr(op1,op2); break;
+            case minus_type: ex = new CFG::SubExpr(op1,op2); break;
+            case mul_type: ex = new CFG::MultExpr(op1,op2); break;
+            case div_type: ex = new CFG::DivExpr(op1,op2); break;
+            case greater_type: ex = new CFG::GreaterExpr(op1,op2); break;
+            case less_type: ex = new CFG::LessExpr(op1,op2); break;
+            case gte_type: ex = new CFG::GTEExpr(op1,op2); break;
+            case lte_type: ex = new CFG::LTEExpr(op1,op2); break;
+            case equal_type: ex = new CFG::EqualExpr(op1,op2); break;
+            case nequal_type: ex = new CFG::NequalExpr(op1,op2); break;
+        }
+        CFG::ExprStatement * e = new CFG::ExprStatement(ex);
         CFG::LValueOperand * reg = new CFG::LValueOperand("eax");
         CFG::ParamStatement * par = new CFG::ParamStatement(reg);
         CFG::StringOperand * s = new CFG::StringOperand("a%da");
